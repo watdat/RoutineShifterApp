@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Routine Shifter</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar: Title, Shift, Status, List -->
+        <aside class="sidebar glass-panel">
+            <header>
+                <h1>Daily Routine Shifter</h1>
+                <p>1日のルーティンを可視化し、時間をシフトして確認できます</p>
+            </header>
+
+            <div class="divider"></div>
+
+            <section class="shift-section">
+                <!-- <h2>シフト設定</h2> -->
+                <div class="shift-control-panel">
+                    <label style="margin-bottom:0.5rem; display:block; color:var(--secondary-color);">時間をずらす
+                        (時間)</label>
+                    <input type="range" id="shiftSlider" class="shift-range" value="0" min="-24" max="24" step="1">
+                    <div class="shift-controls-row">
+                        <button id="shiftMinus" class="btn-icon">-</button>
+                        <input type="number" id="shiftHours" value="0" min="-24" max="24">
+                        <button id="shiftPlus" class="btn-icon">+</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="status-section">
+                <h2>シフト後の今の活動 <br><span style="font-size:0.9em; opacity:0.8;">(基準時刻: <span
+                            id="currentTimeDisplay">--:--</span>)</span></h2>
+                <div id="shiftedActivity" class="status-highlight">特に無し (Free Time)</div>
+            </section>
+
+            <section class="list-section">
+                <h2>シフト後のスケジュール一覧</h2>
+                <div class="list-scroll-container">
+                    <ul id="shiftedScheduleList"></ul>
+                </div>
+            </section>
+        </aside>
+
+        <!-- Main Content: Chart, Inputs -->
+        <main class="main-content">
+            <!-- Top: Chart -->
+            <section class="chart-area glass-panel">
+                <canvas id="routineChart"></canvas>
+            </section>
+
+            <!-- Bottom: Inputs -->
+            <div class="input-area">
+                <!-- Individual Settings -->
+                <section class="individual-settings glass-panel">
+                    <h2>ルーティン個別設定</h2>
+                    <div class="input-group">
+                        <input type="text" id="activityName" placeholder="活動名 (例: 睡眠)">
+                        <div class="time-inputs">
+                            <label>開始: <input type="time" id="startTime"></label>
+                            <label>終了: <input type="time" id="endTime"></label>
+                        </div>
+                        <button id="addBtn" class="btn-primary">追加</button>
+                        <button id="clearBtn" class="btn-secondary">クリア</button>
+                    </div>
+                    <div id="routineList" class="routine-list">
+                        <!-- Added routines will appear here -->
+                    </div>
+                </section>
+
+                <!-- Bulk Import -->
+                <section class="bulk-import glass-panel">
+                    <h2>一括登録</h2>
+                    <div class="input-group">
+                        <textarea id="bulkInput" rows="5" placeholder="例：
+睡眠 22:00-05:00
+仕事 09:00 - 17:00"></textarea>
+                        <button id="importBtn" class="btn-primary" style="margin-top:0.5rem;">テキストから読み込む</button>
+                        <p style="font-size:0.8rem; color:#aaa; margin-top:0.5rem;">※既存のルーティンは上書きされます</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

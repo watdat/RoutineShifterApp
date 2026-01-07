@@ -1,0 +1,366 @@
+:root {
+    --bg-color: #121212;
+    --text-color: #e0e0e0;
+    --panel-bg: rgba(255, 255, 255, 0.05);
+    --panel-border: rgba(255, 255, 255, 0.1);
+    --primary-color: #bb86fc;
+    --secondary-color: #03dac6;
+    --accent-color: #cf6679;
+    --font-family: 'Inter', sans-serif;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    min-height: 100vh;
+    background-image: radial-gradient(circle at top right, #1f1f1f 0%, #121212 100%);
+    overflow-x: hidden;
+    /* Hide scrollbar for body */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+/* Hide scrollbar globally */
+*::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+html {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.app-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, 25%) 1fr;
+    min-height: 100vh;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    box-sizing: border-box;
+    align-items: start;
+}
+
+/* Common Panel Style */
+.glass-panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+h1 {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    margin: 0;
+}
+
+h2 {
+    font-size: 1.1rem;
+    color: var(--secondary-color);
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+p {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin: 0.5rem 0 0 0;
+}
+
+.divider {
+    height: 1px;
+    background: var(--panel-border);
+    margin: 1.5rem 0;
+}
+
+/* Sidebar */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    /* Sticky Sidebar configuration */
+    position: sticky;
+    top: 1.5rem;
+    height: calc(100vh - 3rem);
+    /* Hide scrollbar */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overflow-y: auto;
+}
+
+.status-highlight {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    text-align: center;
+    padding: 1rem;
+    background: rgba(187, 134, 252, 0.1);
+    border-radius: 8px;
+    margin-top: 0.5rem;
+}
+
+.list-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 1.5rem;
+}
+
+.list-scroll-container {
+    flex: 1;
+    overflow-y: auto;
+    border-top: 1px solid var(--panel-border);
+    padding-top: 0.5rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#shiftedScheduleList {
+    list-style: none;
+    padding: 0;
+    font-size: 0.9rem;
+    color: #ccc;
+    margin: 0;
+}
+
+#shiftedScheduleList li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Main Content */
+.main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.chart-area {
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.input-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.individual-settings,
+.bulk-import {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Custom Shift UI */
+.shift-control-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.shift-controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.btn-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 1.5rem;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--primary-color);
+    border: 1px solid var(--panel-border);
+    cursor: pointer;
+}
+
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#shiftHours {
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    -moz-appearance: textfield;
+    appearance: textfield;
+    /* Prevent input from taking full width in flex row */
+    width: auto;
+    flex: 1;
+}
+
+#shiftHours::-webkit-outer-spin-button,
+#shiftHours::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.shift-range {
+    width: 100%;
+    margin-top: 0.5rem;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.1);
+    height: 6px;
+    border-radius: 3px;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.shift-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+}
+
+/* Inputs & Buttons */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+input[type="text"],
+input[type="time"],
+input[type="number"],
+textarea {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--panel-border);
+    color: var(--text-color);
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-family: var(--font-family);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 100px;
+    /* Reduced fixed height constraint */
+}
+
+.time-inputs {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.time-inputs label {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    font-size: 0.8rem;
+}
+
+button {
+    padding: 0.8rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: #000;
+}
+
+.btn-secondary {
+    background-color: transparent;
+    border: 1px solid var(--panel-border);
+    color: var(--text-color);
+}
+
+.routine-list {
+    margin-top: 1rem;
+}
+
+.routine-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.5rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.delete-btn {
+    background: none;
+    color: var(--accent-color);
+    padding: 0.2rem;
+    font-size: 1.2rem;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .app-layout {
+        display: flex;
+        flex-direction: column;
+        /* Ensure items stretch to full width */
+        align-items: stretch;
+        padding: 1rem;
+        gap: 1.5rem;
+    }
+
+    .sidebar {
+        height: auto;
+        position: relative;
+        top: 0;
+        overflow: visible;
+        border-bottom: 1px solid var(--panel-border);
+        padding-bottom: 1.5rem;
+        width: 100%;
+        /* Explicitly full width */
+        box-sizing: border-box;
+        /* Include padding in width */
+    }
+
+    .main-content {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .list-section {
+        max-height: 400px;
+        /* Slightly taller for better view */
+    }
+
+    .input-area {
+        grid-template-columns: 1fr;
+    }
+
+    /* Fix for 2. Lower blocks narrower */
+    .glass-panel {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
