@@ -303,11 +303,10 @@ class RoutineApp {
                 ctx.textBaseline = 'middle';
                 ctx.fillStyle = '#e0e0e0';
 
-                // We want to draw numbers every 3 hours: 0, 3, 6, 9...
+                // We want to draw numbers for all hours: 0-23
                 for (let i = 0; i < 24; i++) {
                     const angle = (i * 15 - 90) * (Math.PI / 180);
-                    const isMajor = i % 3 === 0; // Show number every 3 hours
-                    const isMinor = i % 1 === 0;
+                    const isMajor = i % 3 === 0; // Show with outline every 3 hours
 
                     const tickLength = isMajor ? 10 : 5;
                     // const textRadius = outerRadius + 15;
@@ -321,8 +320,22 @@ class RoutineApp {
                     ctx.stroke();
 
                     // Draw Number
+                    const textX = Math.cos(angle) * (outerRadius - 10);
+                    const textY = Math.sin(angle) * (outerRadius - 10);
+
                     if (isMajor) {
-                        ctx.fillText(i.toString(), Math.cos(angle) * (outerRadius - 10), Math.sin(angle) * (outerRadius - 10));
+                        // Major: Larger Font (16px), Black Outline + White Text
+                        ctx.font = '22px Inter, sans-serif'; // +2px larger
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = '#820086ff'; // Black outline
+                        ctx.strokeText(i.toString(), textX, textY);
+                        ctx.fillStyle = '#e0e0e0';
+                        ctx.fillText(i.toString(), textX, textY);
+                    } else {
+                        // Minor: Smaller Font (13px), White Text only (No outline)
+                        ctx.font = '14px Inter, sans-serif'; // -1px smaller
+                        ctx.fillStyle = '#e0e0e0';
+                        ctx.fillText(i.toString(), textX, textY);
                     }
                 }
 
@@ -427,8 +440,8 @@ class RoutineApp {
                     datalabels: {
                         color: '#fff',
                         font: {
-                            weight: 'bold',
-                            size: 14
+                            weight: 'normal',
+                            size: 15
                         },
                         formatter: (value, ctx) => {
                             if (value < 1) return null;
