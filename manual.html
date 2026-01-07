@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使い方ガイド - Daily Routine Shifter</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        .manual-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .manual-section {
+            margin-bottom: 2rem;
+        }
+
+        .manual-section h3 {
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .step-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .step-list li {
+            position: relative;
+            padding-left: 2rem;
+            margin-bottom: 1rem;
+            color: #ddd;
+        }
+
+        .step-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+
+        .note {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #aaa;
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 2rem;
+            color: var(--secondary-color);
+            text-decoration: none;
+            font-weight: bold;
+            border: 1px solid var(--secondary-color);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: var(--secondary-color);
+            color: #000;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="manual-container">
+        <a href="index.html" class="back-link">← アプリに戻る</a>
+
+        <header class="glass-panel" style="text-align: center; margin-bottom: 2rem;">
+            <h1>使い方ガイド</h1>
+            <p>Daily Routine Shifter の活用方法</p>
+        </header>
+
+        <section class="glass-panel manual-section">
+            <h2>どんなアプリ？</h2>
+            <p>1日のスケジュールを円グラフで可視化し、「もし活動時間を〇時間ずらしたらどうなる？」をシミュレーションできるアプリです。<br>
+            海外旅行の時差ボケ調整や、夜勤・早朝勤務の生活リズム検討に便利です。</p>
+        </section>
+
+        <section class="glass-panel manual-section">
+            <h2>基本的な使い方</h2>
+            
+            <h3>1. ルーティンを登録する</h3>
+            <p>画面右下（スマホでは下部）の入力エリアから、普段のスケジュールを登録します。</p>
+            <ul class="step-list">
+                <li><strong>個別設定:</strong> 「睡眠」「仕事」などの名前と、開始・終了時間を入力して「追加」ボタンを押します。</li>
+                <li><strong>一括登録:</strong> テキストエリアに「活動名 HH:MM-HH:MM」の形式で入力し、「読み込む」ボタンでまとめて登録できます。</li>
+            </ul>
+
+            <h3>2. グラフで確認する</h3>
+            <p>登録したスケジュールが、中央の24時間円グラフに表示されます。<br>
+            現在の時刻が「水色の点」で表示され、今何をしている時間かがひと目でわかります。</p>
+
+            <h3>3. 時間をずらす（シフト機能）</h3>
+            <p>これがこのアプリのメイン機能です！</p>
+            <ul class="step-list">
+                <li>画面左（スマホでは上部）の「時間をずらす」スライダー、または「＋」「－」ボタンを操作します。</li>
+                <li><strong>グラフが回転</strong>し、スケジュール全体が指定した時間分だけずれます。</li>
+                <li>「もし3時間早起きしたら、今の時間は何をしていることになる？」といったシミュレーションが瞬時に行えます。</li>
+            </ul>
+        </section>
+
+        <section class="glass-panel manual-section">
+            <h2>便利な機能</h2>
+            <div class="note">
+                <p><strong>自動保存機能:</strong><br>
+                登録したルーティンやシフト時間は、ブラウザに自動的に保存されます。<br>
+                ページを閉じても、次回開いたときに続きから使えます。</p>
+            </div>
+        </section>
+
+        <footer style="text-align: center; margin-top: 3rem; color: #666; font-size: 0.8rem;">
+            <p>&copy; 2026 Daily Routine Shifter</p>
+        </footer>
+    </div>
+</body>
+</html>
