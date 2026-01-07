@@ -1,3 +1,4 @@
+/* --- 変数定義 (カラーパレット・フォント) --- */
 :root {
     --bg-color: #121212;
     --text-color: #e0e0e0;
@@ -9,6 +10,7 @@
     --font-family: 'Inter', sans-serif;
 }
 
+/* --- 基本設定 (リセット・背景) --- */
 body {
     margin: 0;
     padding: 0;
@@ -35,6 +37,7 @@ html {
     -ms-overflow-style: none;
 }
 
+/* --- 全体レイアウト (グリッド構成) --- */
 .app-layout {
     display: grid;
     grid-template-columns: minmax(320px, 25%) 1fr;
@@ -45,7 +48,7 @@ html {
     align-items: start;
 }
 
-/* Common Panel Style */
+/* --- 共通パネルデザイン (グラスモーフィズム) --- */
 .glass-panel {
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
@@ -80,7 +83,7 @@ p {
     margin: 1.5rem 0;
 }
 
-/* Sidebar */
+/* --- サイドバー (左側/スマホ上部) --- */
 .sidebar {
     display: flex;
     flex-direction: column;
@@ -135,7 +138,7 @@ p {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Main Content */
+/* --- メインコンテンツ (右側/スマホ下部) --- */
 .main-content {
     display: flex;
     flex-direction: column;
@@ -161,7 +164,7 @@ p {
     flex-direction: column;
 }
 
-/* Custom Shift UI */
+/* --- シフト操作UI (スライダー・ボタン) --- */
 .shift-control-panel {
     display: flex;
     flex-direction: column;
@@ -235,7 +238,7 @@ p {
     cursor: pointer;
 }
 
-/* Inputs & Buttons */
+/* --- 入力フォーム & ボタン共通設定 --- */
 .input-group {
     display: flex;
     flex-direction: column;
@@ -320,7 +323,7 @@ button:active {
     font-size: 1.2rem;
 }
 
-/* Responsive */
+/* --- レスポンシブ対応 (スマホ向けレイアウト) --- */
 @media (max-width: 900px) {
     .app-layout {
         display: flex;

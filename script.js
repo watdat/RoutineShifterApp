@@ -13,8 +13,9 @@ class RoutineApp {
             '#AED581', '#FFD54F', '#90CAF9', '#F48FB1', '#80CBC4'
         ];
 
+        // --- 初期化処理 ---
         this.initElements();
-        this.loadData(); // Load saved data on startup
+        this.loadData(); // 保存データの読み込み
         this.addEventListeners();
         this.renderChart();
         this.updateTimeDisplay();
@@ -27,6 +28,7 @@ class RoutineApp {
         }, 60000);
     }
 
+    // --- UI要素の取得 ---
     initElements() {
         this.activityInput = document.getElementById('activityName');
         this.startTimeInput = document.getElementById('startTime');
@@ -46,6 +48,7 @@ class RoutineApp {
         this.shiftPlus = document.getElementById('shiftPlus');
     }
 
+    // --- イベントリスナーの登録 ---
     addEventListeners() {
         this.addBtn.addEventListener('click', () => this.addRoutine());
         this.clearBtn.addEventListener('click', () => this.clearRoutines());
@@ -87,6 +90,8 @@ class RoutineApp {
         });
     }
 
+    // --- 一括登録ロジック ---
+    // "活動名 HH:MM-HH:MM" 形式のテキストを解析
     importFromText() {
         const text = this.bulkInput.value;
         if (!text.trim()) {
@@ -143,6 +148,7 @@ class RoutineApp {
         this.bulkInput.value = ''; // Clear input if successful
     }
 
+    // --- 個別ルーティン管理 ---
     addRoutine() {
         const name = this.activityInput.value;
         const start = this.startTimeInput.value;
@@ -193,6 +199,7 @@ class RoutineApp {
         this.saveData(); // Save after delete
     }
 
+    // --- UI描画: スケジュールリスト ---
     renderList() {
         this.routineList.innerHTML = '';
         this.routines.sort((a, b) => a.start.localeCompare(b.start));
@@ -217,6 +224,7 @@ class RoutineApp {
         return h + m / 60;
     }
 
+    // --- グラフ描画ロジック (Chart.js) ---
     renderChart() {
         if (this.chart) {
             this.chart.destroy();
@@ -436,6 +444,7 @@ class RoutineApp {
         });
     }
 
+    // --- 状態更新: シフト計算とステータス表示 ---
     updateShiftInfo() {
         const now = new Date();
         const currentHours = now.getHours();
@@ -518,6 +527,7 @@ class RoutineApp {
         }
     }
 
+    // --- データ保存 (LocalStorage) ---
     saveData() {
         try {
             const data = {
