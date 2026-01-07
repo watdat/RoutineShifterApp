@@ -325,16 +325,16 @@ class RoutineApp {
 
                     if (isMajor) {
                         // Major: Larger Font (16px), Black Outline + White Text
-                        ctx.font = '22px Inter, sans-serif'; // +2px larger
+                        ctx.font = '18px Inter, sans-serif'; // +2px larger
                         ctx.lineWidth = 2;
                         ctx.strokeStyle = '#820086ff'; // Black outline
                         ctx.strokeText(i.toString(), textX, textY);
-                        ctx.fillStyle = '#e0e0e0';
+                        ctx.fillStyle = '#ffffffff';
                         ctx.fillText(i.toString(), textX, textY);
                     } else {
                         // Minor: Smaller Font (13px), White Text only (No outline)
                         ctx.font = '14px Inter, sans-serif'; // -1px smaller
-                        ctx.fillStyle = '#e0e0e0';
+                        ctx.fillStyle = '#cbcbcbcb';
                         ctx.fillText(i.toString(), textX, textY);
                     }
                 }
