@@ -46,6 +46,7 @@ class RoutineApp {
         this.shiftSlider = document.getElementById('shiftSlider');
         this.shiftMinus = document.getElementById('shiftMinus');
         this.shiftPlus = document.getElementById('shiftPlus');
+        this.memoInput = document.getElementById('memoInput'); // Memo Field
     }
 
     // --- イベントリスナーの登録 ---
@@ -87,6 +88,11 @@ class RoutineApp {
         this.shiftPlus.addEventListener('click', () => {
             let val = parseFloat(this.shiftInput.value) || 0;
             applyShift(val + 1);
+        });
+
+        // Memo Auto-save
+        this.memoInput.addEventListener('input', () => {
+            localStorage.setItem('routineApp_memo', this.memoInput.value);
         });
     }
 
@@ -584,6 +590,12 @@ class RoutineApp {
                 if (this.shiftSlider) {
                     this.shiftSlider.value = this.shiftHours;
                 }
+            }
+            
+            // Load Memo
+            const savedMemo = localStorage.getItem('routineApp_memo');
+            if (savedMemo && this.memoInput) {
+                this.memoInput.value = savedMemo;
             }
         } catch (e) {
             console.error("Load failed", e);

@@ -104,6 +104,25 @@ p {
     /* Height based on content */
 }
 
+.memo-area {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--panel-border);
+    color: var(--text-color);
+    padding: 0.8rem;
+    /* Matches other inputs */
+    border-radius: 8px;
+    font-family: var(--font-family);
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1.0rem;
+    /* Smaller text "0.85" - User asked about this */
+    /* Smaller text "0.85" - User asked about this */
+    resize: vertical;
+    /* Allow vertical resize */
+    min-height: 60px;
+    /* Default height */
+}
+
 .sidebar-lower {
     flex: 1;
     /* Comparison fills remaining height */
@@ -293,6 +312,11 @@ textarea {
     resize: vertical;
     min-height: 100px;
     /* Reduced fixed height constraint */
+}
+
+#bulkInput {
+    font-size: 1.0rem;
+    /* Match Memo field size */
 }
 
 .time-inputs {
