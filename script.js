@@ -49,6 +49,12 @@ class RoutineApp {
         this.memoInput = document.getElementById('memoInput'); // Memo Field
         this.baseWakeupTimeInput = document.getElementById('baseWakeupTime'); // Wake-up Time
         this.dynamicTimeSpans = document.querySelectorAll('.dynamic-time'); // Dynamic Spans
+
+        // Chime implementation
+        this.chimeSelect = document.getElementById('chimeSelect');
+        this.testChimeBtn = document.getElementById('testChimeBtn');
+        this.audioCtx = null;
+        this.lastChimeMinute = -1;
     }
 
     // --- イベントリスナーの登録 ---
@@ -59,6 +65,19 @@ class RoutineApp {
 
         if (this.baseWakeupTimeInput) {
             this.baseWakeupTimeInput.addEventListener('input', () => this.updateCheckboxTimes());
+        }
+
+        if (this.testChimeBtn) {
+            this.testChimeBtn.addEventListener('click', () => this.playChime());
+        }
+
+        if (this.chimeSelect) {
+            this.chimeSelect.addEventListener('change', () => {
+                if (this.chimeSelect.value !== 'none') {
+                    this.initAudio();
+                    this.saveData(); // Sync selection
+                }
+            });
         }
 
         // Sync Helper
@@ -566,50 +585,160 @@ class RoutineApp {
 
     updateTimeDisplay() {
         // Time is now updated via Chart redraw (clockFace plugin)
-        // This function kept for compatibility if needed, or trigger chart update
         if (this.chart) this.chart.update();
+
+        // Check for routine end chime
+        this.checkChime();
+    }
+
+    // --- Audio Logic ---
+    initAudio() {
+        if (!this.audioCtx) {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume();
+        }
+    }
+
+    playChime() {
+        if (!this.chimeSelect || this.chimeSelect.value === 'none') return;
+
+        this.initAudio();
+        const ctx = this.audioCtx;
+        const now = ctx.currentTime;
+        const type = this.chimeSelect.value;
+
+        if (type === 'bell') {
+            // Rich Soft Bell
+            const frequencies = [440, 880, 1320];
+            const gains = [0.2, 0.1, 0.05];
+            frequencies.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.99, now + 1.5);
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(gains[i], now + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 1.5);
+            });
+        } else if (type === 'ding') {
+            // Simple Ding
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(1200, now);
+            osc.frequency.exponentialRampToValueAtTime(800, now + 0.6);
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.2, now + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.6);
+        } else if (type === 'marimba') {
+            // Marimba-like
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(660, now);
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.4, now + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } else if (type === 'digital') {
+            // Digital Blip
+            [0, 0.12].forEach(delay => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(1500, now + delay);
+                gain.gain.setValueAtTime(0, now + delay);
+                gain.gain.linearRampToValueAtTime(0.1, now + delay + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.08);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + delay);
+                osc.stop(now + delay + 0.1);
+            });
+        }
+    }
+
+    checkChime() {
+        if (!this.chimeSelect || this.chimeSelect.value === 'none') return;
+
+        const now = new Date();
+        const currentMinute = now.getMinutes();
+        const currentHour = now.getHours();
+
+        // Prevent double trigger in the same minute
+        if (currentMinute === this.lastChimeMinute) return;
+
+        const currentDecimal = currentHour + currentMinute / 60;
+
+        // Target: Routines ending exactly now (shifted)
+        this.routines.forEach(r => {
+            const endDec = this.timeToDecimal(r.end);
+            let shiftedEnd = (endDec + this.shiftHours) % 24;
+            if (shiftedEnd < 0) shiftedEnd += 24;
+
+            // Threshold: 0.5 minutes (to catch the transition in the update loop)
+            const diff = Math.abs(currentDecimal - shiftedEnd);
+            // Multi-minute routines wrap correctly, decimal hours are fine.
+            // Check if current HH:MM matches shiftedEnd HH:MM precisely
+            const shiftEndH = Math.floor(shiftedEnd);
+            const shiftEndM = Math.round((shiftedEnd - shiftEndH) * 60) % 60;
+
+            if (currentHour === shiftEndH && currentMinute === shiftEndM) {
+                this.playChime();
+                this.lastChimeMinute = currentMinute;
+            }
+        });
     }
 
     // --- データ保存 (LocalStorage) ---
     saveData() {
-        try {
-            const data = {
-                routines: this.routines,
-                shiftHours: this.shiftHours
-            };
-            localStorage.setItem('routineApp_data', JSON.stringify(data));
-        } catch (e) {
-            console.error("Save failed", e);
-        }
+        const data = {
+            routines: this.routines,
+            shiftHours: this.shiftHours,
+            memo: this.memoInput ? this.memoInput.value : "",
+            baseWakeupTime: this.baseWakeupTimeInput ? this.baseWakeupTimeInput.value : "05:00",
+            chimeType: this.chimeSelect ? this.chimeSelect.value : "none"
+        };
+        localStorage.setItem('routineData', JSON.stringify(data));
     }
 
     loadData() {
-        try {
-            const saved = localStorage.getItem('routineApp_data');
-            if (saved) {
-                const data = JSON.parse(saved);
-                this.routines = data.routines || [];
-                this.shiftHours = data.shiftHours || 0;
-
-                if (this.shiftInput) {
-                    this.shiftInput.value = this.shiftHours;
-                }
-                if (this.shiftSlider) {
-                    this.shiftSlider.value = this.shiftHours;
-                }
+        const saved = localStorage.getItem('routineData');
+        if (saved) {
+            const data = JSON.parse(saved);
+            this.routines = data.routines || [];
+            this.shiftHours = data.shiftHours || 0;
+            if (this.memoInput && data.memo !== undefined) {
+                this.memoInput.value = data.memo;
             }
-
-            // Load Memo
-            const savedMemo = localStorage.getItem('routineApp_memo');
-            if (savedMemo && this.memoInput) {
-                this.memoInput.value = savedMemo;
+            if (this.baseWakeupTimeInput && data.baseWakeupTime) {
+                this.baseWakeupTimeInput.value = data.baseWakeupTime;
             }
-
-            // Initial calculation for dynamic times
-            this.updateCheckboxTimes();
-        } catch (e) {
-            console.error("Load failed", e);
+            if (this.chimeSelect && data.chimeType) {
+                this.chimeSelect.value = data.chimeType;
+            }
+            if (this.shiftInput) {
+                this.shiftInput.value = this.shiftHours;
+            }
+            if (this.shiftSlider) {
+                this.shiftSlider.value = this.shiftHours;
+            }
         }
+        this.updateCheckboxTimes();
     }
 
     // --- Dynamic Checkbox Time Update ---

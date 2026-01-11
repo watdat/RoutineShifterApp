@@ -31,8 +31,22 @@
 
                     <!-- Memo Field -->
                     <div style="margin-top: 1.5rem;">
-                        <label for="memoInput"
-                            style="display:block; color:var(--text-color); font-size:1rem; margin-bottom:0.5rem; opacity:0.9;">Memo:</label>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <label for="memoInput"
+                                style="color:var(--text-color); font-size:1rem; margin-bottom:0.5rem; opacity:0.9;">Memo:</label>
+                            <div style="font-size: 0.8rem; opacity: 0.8; display: flex; align-items: center; gap: 8px;">
+                                <select id="chimeSelect"
+                                    style="background: rgba(0,0,0,0.3); color: var(--text-color); border: 1px solid var(--panel-border); border-radius: 4px; padding: 1px 4px; font-size: 0.85rem; cursor: pointer; outline: none;">
+                                    <option value="none">None</option>
+                                    <option value="bell">Soft Bell</option>
+                                    <option value="ding">Ding</option>
+                                    <option value="marimba">Marimba</option>
+                                    <option value="digital">Digital</option>
+                                </select>
+                                <button id="testChimeBtn" class="btn-secondary"
+                                    style="padding: 2px 8px; font-size: 0.8rem; border-radius: 4px;">Sound Test</button>
+                            </div>
+                        </div>
                         <textarea id="memoInput" class="memo-area"
                             placeholder="(Todoやちょっとしたメモなど、ここに置いておくことができます)"></textarea>
                     </div>

@@ -165,9 +165,15 @@ p {
     opacity: 1;
 }
 
-.checkbox-item input[type="checkbox"] {
+.checkbox-item input[type="checkbox"],
+#chimeEnabled,
+#chimeSelect {
     accent-color: var(--secondary-color);
     cursor: pointer;
+}
+
+#chimeSelect:focus {
+    border-color: var(--secondary-color);
 }
 
 .sidebar-lower {
