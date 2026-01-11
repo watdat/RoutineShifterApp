@@ -356,6 +356,25 @@ class RoutineApp {
                 ctx.fill();
                 ctx.shadowBlur = 0;
 
+                // 3. Draw Center Time (Big Digital Clock)
+                ctx.fillStyle = '#03DAC6';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                // Adjust font size based on chart size, max 60px
+                const timeFontSize = Math.min(width, height) / 8;
+                ctx.font = `bold ${timeFontSize}px 'Inter', sans-serif`;
+
+                // Calculate Base Time: Current Time - Shift Hours
+                const baseTime = new Date(now.getTime() - (this.shiftHours * 60 * 60 * 1000));
+                const timeStr = baseTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+                ctx.fillText(timeStr, 0, 0); // At center
+
+                // Optional label "基準時刻" above time (Reverted Style)
+                ctx.font = `${timeFontSize * 0.3}px 'Inter', sans-serif`;
+                ctx.fillStyle = '#aaaaaa';
+                ctx.fillText('基準時刻', 0, -timeFontSize * 0.8);
+
                 ctx.restore();
             }
         };
@@ -533,11 +552,9 @@ class RoutineApp {
     }
 
     updateTimeDisplay() {
-        const now = new Date();
-        const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-        if (this.currentTimeDisplay) {
-            this.currentTimeDisplay.textContent = timeString;
-        }
+        // Time is now updated via Chart redraw (clockFace plugin)
+        // This function kept for compatibility if needed, or trigger chart update
+        if (this.chart) this.chart.update();
     }
 
     // --- データ保存 (LocalStorage) ---

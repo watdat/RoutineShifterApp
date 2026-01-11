@@ -13,60 +13,65 @@
 
 <body>
     <div class="app-layout">
-        <!-- Sidebar: Title, Shift, Status, List -->
-        <aside class="sidebar glass-panel">
-            <header>
-                <h1>Daily Routine Shifter</h1>
-                <p>1日のルーティンを可視化し、時間をシフトして確認できます</p>
-                <div style="margin-top: 0.5rem; text-align: left;">
-                    <a href="manual.html"
-                        style="color: var(--secondary-color); text-decoration: none; font-size: 0.9rem; border-bottom: 1px dotted var(--secondary-color);">
-                        <span style="opacity: 0.8;">ℹ️</span> 使い方ガイド
-                    </a>
-                </div>
-            </header>
-
-            <div class="divider"></div>
-
-            <section class="shift-section">
-                <!-- <h2>シフト設定</h2> -->
-                <div class="shift-control-panel">
-                    <label style="margin-bottom:0.5rem; display:block; color:var(--secondary-color);">時間をずらす
-                        (時間)</label>
-                    <input type="range" id="shiftSlider" class="shift-range" value="0" min="-24" max="24" step="1">
-                    <div class="shift-controls-row">
-                        <button id="shiftMinus" class="btn-icon">-</button>
-                        <input type="number" id="shiftHours" value="0" min="-24" max="24">
-                        <button id="shiftPlus" class="btn-icon">+</button>
+        <!-- Sidebar: Split into two blocks -->
+        <aside class="sidebar">
+            <!-- Upper Panel: Header & Manual -->
+            <section class="glass-panel sidebar-upper">
+                <header>
+                    <h1>Daily Routine Shifter</h1>
+                    <p>1日のルーティンを可視化し、時間をシフトして確認できます</p>
+                    <div style="margin-top: 0.5rem; text-align: left;">
+                        <a href="manual.html"
+                            style="color: var(--secondary-color); text-decoration: none; font-size: 0.9rem; border-bottom: 1px dotted var(--secondary-color);">
+                            <span style="opacity: 0.8;">ℹ️</span> 使い方ガイド
+                        </a>
                     </div>
-                </div>
+                </header>
             </section>
 
-            <section class="status-section">
-                <h2>シフト後の今の活動 <br><span style="font-size:0.9em; opacity:0.8;">(基準時刻: <span
-                            id="currentTimeDisplay">--:--</span>)</span></h2>
-                <div id="shiftedActivity" class="status-highlight">特に無し (Free Time)</div>
-            </section>
-
-            <section class="list-section">
-                <h2>シフト後のスケジュール一覧</h2>
-                <div class="list-scroll-container">
-                    <ul id="shiftedScheduleList"></ul>
-                </div>
-                <div class="list-scroll-container">
-                    <ul id="shiftedScheduleList"></ul>
-                </div>
-            </section>
-        </aside>
-
-        <!-- Main Content: Chart, Inputs -->
-        <main class="main-content">
-            <!-- Top: Chart -->
+            <!-- Chart Panel (Moved here) -->
             <section class="chart-area glass-panel">
                 <canvas id="routineChart"></canvas>
             </section>
 
-            <!-- Bottom: Inputs -->
+            <!-- Lower Panel: Shift, Status, List -->
+            <section class="glass-panel sidebar-lower">
+                <section class="shift-section">
+                    <!-- <h2>シフト設定</h2> -->
+                    <div class="shift-control-panel">
+                        <label style="margin-bottom:0.5rem; display:block; color:var(--secondary-color);">時間をずらす
+                            (時間)</label>
+                        <input type="range" id="shiftSlider" class="shift-range" value="0" min="-24" max="24" step="1">
+                        <div class="shift-controls-row">
+                            <button id="shiftMinus" class="btn-icon">-</button>
+                            <input type="number" id="shiftHours" value="0" min="-24" max="24">
+                            <button id="shiftPlus" class="btn-icon">+</button>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="divider"></div>
+
+                <section class="status-section">
+                    <h2>シフト後の今の活動</h2>
+                    <!-- Removed time from here, will be in chart -->
+                    <div id="shiftedActivity" class="status-highlight">特に無し (Free Time)</div>
+                </section>
+
+                <section class="list-section">
+                    <h2>シフト後のスケジュール一覧</h2>
+                    <div class="list-scroll-container">
+                        <ul id="shiftedScheduleList"></ul>
+                    </div>
+                </section>
+            </section>
+        </aside>
+
+        <!-- Main Content: Inputs (Vertical) -->
+        <main class="main-content">
+            <!-- Top: Chart (Removed/Moved) -->
+
+            <!-- Bottom: Inputs (Stacked) -->
             <div class="input-area">
                 <!-- Individual Settings -->
                 <section class="individual-settings glass-panel">

@@ -40,7 +40,8 @@ html {
 /* --- 全体レイアウト (グリッド構成) --- */
 .app-layout {
     display: grid;
-    grid-template-columns: minmax(320px, 25%) 1fr;
+    /* 50% Sidebar, 50% Main Content */
+    grid-template-columns: 1fr 1fr;
     min-height: 100vh;
     gap: 1.5rem;
     padding: 1.5rem;
@@ -84,6 +85,7 @@ p {
 }
 
 /* --- サイドバー (左側/スマホ上部) --- */
+/* --- サイドバー (左側/スマホ上部) --- */
 .sidebar {
     display: flex;
     flex-direction: column;
@@ -91,10 +93,26 @@ p {
     position: sticky;
     top: 1.5rem;
     height: calc(100vh - 3rem);
-    /* Hide scrollbar */
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    overflow-y: auto;
+    gap: 1.5rem;
+    /* Gap between Upper and Lower panels */
+    /* Remove scrollbar hiding from container, scrollability handled inside panels if needed */
+}
+
+/* Sidebar split panels */
+.sidebar-upper {
+    flex: 0 0 auto;
+    /* Height based on content */
+}
+
+.sidebar-lower {
+    flex: 1;
+    /* Comparison fills remaining height */
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    /* Enable scrolling inside */
+    overflow: hidden;
+    /* Prevent spill */
 }
 
 .status-highlight {
@@ -114,6 +132,8 @@ p {
     flex-direction: column;
     min-height: 0;
     margin-top: 1.5rem;
+    overflow: hidden;
+    /* For inner scroll */
 }
 
 .list-scroll-container {
@@ -154,7 +174,8 @@ p {
 
 .input-area {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* Vertical stack */
+    grid-template-columns: 1fr;
     gap: 1.5rem;
 }
 
@@ -179,10 +200,13 @@ p {
 }
 
 .btn-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    font-size: 1.5rem;
+    width: 60px;
+    /* Enhanced size */
+    height: 60px;
+    /* Enhanced size */
+    border-radius: 12px;
+    font-size: 2rem;
+    /* Enhanced size */
     line-height: 1;
     padding: 0;
     display: flex;
@@ -205,8 +229,9 @@ p {
     -moz-appearance: textfield;
     appearance: textfield;
     /* Prevent input from taking full width in flex row */
-    width: auto;
-    flex: 1;
+    width: 80px;
+    /* Fixed width */
+    flex: 0 0 auto;
 }
 
 #shiftHours::-webkit-outer-spin-button,
@@ -221,8 +246,9 @@ p {
     accent-color: var(--primary-color);
     cursor: pointer;
     background: rgba(255, 255, 255, 0.1);
-    height: 6px;
-    border-radius: 3px;
+    height: 12px;
+    /* Thicker track */
+    border-radius: 6px;
     outline: none;
     -webkit-appearance: none;
     appearance: none;
@@ -231,11 +257,15 @@ p {
 .shift-range::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 30px;
+    /* Larger thumb */
+    height: 30px;
+    /* Larger thumb */
     border-radius: 50%;
     background: var(--primary-color);
     cursor: pointer;
+    margin-top: 0px;
+    /* Center alignment helper if needed */
 }
 
 /* --- 入力フォーム & ボタン共通設定 --- */
