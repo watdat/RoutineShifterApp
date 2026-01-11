@@ -129,10 +129,27 @@ p {
 
 .checkbox-row {
     display: flex;
-    justify-content: space-between;
-    margin-top: 0.8rem;
-    font-size: 0.85rem;
+    justify-content: flex-start;
+    /* Left aligned PC & Mobile */
+    flex-wrap: wrap;
+    /* Wrap if needed */
+    column-gap: 1rem;
+    /* Horizontal spacing */
+    row-gap: 0.5rem;
+    /* Tighter vertical spacing */
+    margin-top: 1.0rem;
+    font-size: 1.0rem;
+    /* User requested increase */
     color: #ccc;
+    align-items: center;
+}
+
+/* Force Wake input to take full row */
+.wakeup-item {
+    width: 100%;
+    flex: 0 0 100%;
+    margin-bottom: 0;
+    /* Remove extra spacing */
 }
 
 .checkbox-item {
@@ -331,6 +348,12 @@ p {
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
+}
+
+/* Hide Native Time Picker Icon */
+input[type="time"]::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
 }
 
 input[type="text"],

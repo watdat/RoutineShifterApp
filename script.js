@@ -47,6 +47,8 @@ class RoutineApp {
         this.shiftMinus = document.getElementById('shiftMinus');
         this.shiftPlus = document.getElementById('shiftPlus');
         this.memoInput = document.getElementById('memoInput'); // Memo Field
+        this.baseWakeupTimeInput = document.getElementById('baseWakeupTime'); // Wake-up Time
+        this.dynamicTimeSpans = document.querySelectorAll('.dynamic-time'); // Dynamic Spans
     }
 
     // --- イベントリスナーの登録 ---
@@ -54,6 +56,10 @@ class RoutineApp {
         this.addBtn.addEventListener('click', () => this.addRoutine());
         this.clearBtn.addEventListener('click', () => this.clearRoutines());
         this.importBtn.addEventListener('click', () => this.importFromText());
+
+        if (this.baseWakeupTimeInput) {
+            this.baseWakeupTimeInput.addEventListener('input', () => this.updateCheckboxTimes());
+        }
 
         // Sync Helper
         const applyShift = (val) => {
@@ -71,6 +77,7 @@ class RoutineApp {
             this.updateShiftInfo();
             this.renderChart();
             this.saveData();
+            this.updateCheckboxTimes(); // Update Checkboxes
         };
 
         // Input
@@ -597,9 +604,36 @@ class RoutineApp {
             if (savedMemo && this.memoInput) {
                 this.memoInput.value = savedMemo;
             }
+
+            // Initial calculation for dynamic times
+            this.updateCheckboxTimes();
         } catch (e) {
             console.error("Load failed", e);
         }
+    }
+
+    // --- Dynamic Checkbox Time Update ---
+    updateCheckboxTimes() {
+        if (!this.baseWakeupTimeInput) return;
+
+        const baseTimeStr = this.baseWakeupTimeInput.value;
+        const [baseH, baseM] = baseTimeStr.split(':').map(Number);
+        const baseTotalHours = baseH + baseM / 60;
+
+        this.dynamicTimeSpans.forEach(span => {
+            const offset = parseFloat(span.getAttribute('data-offset'));
+            // Formula: Base + Offset + Shift
+            let targetTotalHours = baseTotalHours + offset + this.shiftHours;
+
+            // Normalize to 0-24 range
+            targetTotalHours = targetTotalHours % 24;
+            if (targetTotalHours < 0) targetTotalHours += 24;
+
+            const targetH = Math.floor(targetTotalHours);
+            const targetM = Math.round((targetTotalHours - targetH) * 60);
+
+            span.textContent = `${String(targetH).padStart(2, '0')}:${String(targetM).padStart(2, '0')}`;
+        });
     }
 }
 
