@@ -643,6 +643,9 @@ class RoutineApp {
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
 
+    /**
+     * Normalizes hour value to 0-23 range
+     */
     _normalizeHour(h) {
         let val = h % 24;
         return val < 0 ? val + 24 : val;
@@ -679,6 +682,8 @@ class RoutineApp {
         // Fallback to simple decimal parsing
         return parseFloat(str) || 0;
     }
+
+
 
     _getSegmentGradient(ctx, colors) {
         const { chart, dataIndex } = ctx;
