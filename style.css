@@ -242,6 +242,8 @@ p {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0rem;
+    /* Reverted to baseline for outside clock numbers */
 }
 
 .input-area {
@@ -310,7 +312,7 @@ p {
     -moz-appearance: textfield;
     appearance: textfield;
     /* Prevent input from taking full width in flex row */
-    width: 80px;
+    width: 100px;
     /* Fixed width */
     flex: 0 0 auto;
 }

@@ -1,237 +1,196 @@
-// Register the datalabels plugin
+// Register the datalabels plugin for Chart.js
 Chart.register(ChartDataLabels);
 
+/**
+ * RoutineApp - Main application class for Daily Routine Shifter
+ * Refactored version (Local only)
+ */
 class RoutineApp {
     constructor() {
+        // --- State Variables ---
         this.routines = [];
-        this.chart = null;
         this.shiftHours = 0;
+        this.chart = null;
+        this.audioCtx = null;
+        this.lastChimeMinute = -1;
 
-        // Colors for chart segments
+        // --- Configuration ---
         this.colors = [
             '#BB86FC', '#03DAC6', '#CF6679', '#FFB74D', '#4FC3F7',
             '#AED581', '#FFD54F', '#90CAF9', '#F48FB1', '#80CBC4'
         ];
 
-        // --- 初期化処理 ---
-        this.initElements();
-        this.loadData(); // 保存データの読み込み
-        this.addEventListeners();
-        this.renderChart();
-        this.updateTimeDisplay();
-        this.updateShiftInfo();
+        // Initializing UI and Data
+        this._initElements();
+        this._loadData();
+        this._addEventListeners();
 
-        // Update current time display (and chart marker) every minute
-        setInterval(() => {
-            this.updateTimeDisplay();
-            if (this.chart) this.chart.update(); // Update chart to move time marker
-        }, 60000);
+        // Initial render
+        this._renderAll();
+
+        // Start periodic sync (Once per minute, synced to 00s)
+        this._startPeriodicTasks();
     }
 
-    // --- UI要素の取得 ---
-    initElements() {
+    /**
+     * Synced periodic update loop
+     */
+    _startPeriodicTasks() {
+        this._updatePeriodicTasks();
+
+        const now = new Date();
+        const delay = (60 - now.getSeconds()) * 1000 + 100; // Small buffer
+
+        setTimeout(() => {
+            setInterval(() => this._updatePeriodicTasks(), 60000);
+            this._updatePeriodicTasks();
+        }, delay);
+    }
+
+    // ==========================================
+    // 1. INITIALIZATION
+    // ==========================================
+
+    _initElements() {
+        // Form Inputs
         this.activityInput = document.getElementById('activityName');
         this.startTimeInput = document.getElementById('startTime');
         this.endTimeInput = document.getElementById('endTime');
+        this.bulkInput = document.getElementById('bulkInput');
+        this.memoInput = document.getElementById('memoInput');
+        this.baseWakeupTimeInput = document.getElementById('baseWakeupTime');
+
+        // Controls
         this.addBtn = document.getElementById('addBtn');
         this.clearBtn = document.getElementById('clearBtn');
-        this.routineList = document.getElementById('routineList');
-        this.ctx = document.getElementById('routineChart').getContext('2d');
-        this.shiftInput = document.getElementById('shiftHours');
-        this.statusDisplay = document.getElementById('shiftedActivity');
-        this.shiftedScheduleList = document.getElementById('shiftedScheduleList');
-        this.currentTimeDisplay = document.getElementById('currentTimeDisplay');
-        this.bulkInput = document.getElementById('bulkInput');
         this.importBtn = document.getElementById('importBtn');
+        this.shiftInput = document.getElementById('shiftHours');
         this.shiftSlider = document.getElementById('shiftSlider');
         this.shiftMinus = document.getElementById('shiftMinus');
         this.shiftPlus = document.getElementById('shiftPlus');
-        this.memoInput = document.getElementById('memoInput'); // Memo Field
-        this.baseWakeupTimeInput = document.getElementById('baseWakeupTime'); // Wake-up Time
-        this.dynamicTimeSpans = document.querySelectorAll('.dynamic-time'); // Dynamic Spans
 
-        // Chime implementation
+        // Display Areas
+        this.routineList = document.getElementById('routineList');
+        this.statusDisplay = document.getElementById('shiftedActivity');
+        this.shiftedScheduleList = document.getElementById('shiftedScheduleList');
+        this.currentTimeDisplay = document.getElementById('currentTimeDisplay');
+        this.dynamicTimeSpans = document.querySelectorAll('.dynamic-time');
+        this.ctx = document.getElementById('routineChart').getContext('2d');
+
+        // Chime Controls
         this.chimeSelect = document.getElementById('chimeSelect');
         this.testChimeBtn = document.getElementById('testChimeBtn');
-        this.audioCtx = null;
-        this.lastChimeMinute = -1;
     }
 
-    // --- イベントリスナーの登録 ---
-    addEventListeners() {
+    _addEventListeners() {
+        // Routing Management
         this.addBtn.addEventListener('click', () => this.addRoutine());
         this.clearBtn.addEventListener('click', () => this.clearRoutines());
         this.importBtn.addEventListener('click', () => this.importFromText());
 
+        // Shift Controls
+        this.shiftInput.addEventListener('change', (e) => this._applyShift(this._offsetStrToDecimal(e.target.value), 'input'));
+        this.shiftSlider.addEventListener('input', (e) => this._applyShift(e.target.value, 'slider'));
+        this.shiftMinus.addEventListener('click', () => this._applyShift(this.shiftHours - 0.5));
+        this.shiftPlus.addEventListener('click', () => this._applyShift(this.shiftHours + 0.5));
+
+        // Settings / Customization
         if (this.baseWakeupTimeInput) {
-            this.baseWakeupTimeInput.addEventListener('input', () => this.updateCheckboxTimes());
+            this.baseWakeupTimeInput.addEventListener('input', () => {
+                this._updateCheckboxTimes();
+                this._saveData();
+            });
+        }
+        if (this.memoInput) {
+            this.memoInput.addEventListener('input', () => this._saveData());
         }
 
+        // Chime Controls
         if (this.testChimeBtn) {
             this.testChimeBtn.addEventListener('click', () => this.playChime());
         }
-
         if (this.chimeSelect) {
             this.chimeSelect.addEventListener('change', () => {
-                if (this.chimeSelect.value !== 'none') {
-                    this.initAudio();
-                    this.saveData(); // Sync selection
-                }
+                if (this.chimeSelect.value !== 'none') this._initAudio();
+                this._saveData();
             });
         }
-
-        // Sync Helper
-        const applyShift = (val) => {
-            let numVal = parseFloat(val) || 0;
-            // Limit range to -24 to 24
-            if (numVal < -24) numVal = -24;
-            if (numVal > 24) numVal = 24;
-
-            this.shiftHours = numVal;
-            // Update UI
-            this.shiftInput.value = this.shiftHours;
-            this.shiftSlider.value = this.shiftHours;
-
-            // Logic
-            this.updateShiftInfo();
-            this.renderChart();
-            this.saveData();
-            this.updateCheckboxTimes(); // Update Checkboxes
-        };
-
-        // Input
-        this.shiftInput.addEventListener('input', (e) => applyShift(e.target.value));
-
-        // Slider
-        this.shiftSlider.addEventListener('input', (e) => applyShift(e.target.value));
-
-        // Buttons
-        this.shiftMinus.addEventListener('click', () => {
-            let val = parseFloat(this.shiftInput.value) || 0;
-            applyShift(val - 1);
-        });
-
-        this.shiftPlus.addEventListener('click', () => {
-            let val = parseFloat(this.shiftInput.value) || 0;
-            applyShift(val + 1);
-        });
-
-        // Memo Auto-save
-        this.memoInput.addEventListener('input', () => {
-            localStorage.setItem('routineApp_memo', this.memoInput.value);
-        });
     }
 
-    // --- 一括登録ロジック ---
-    // "活動名 HH:MM-HH:MM" 形式のテキストを解析
-    importFromText() {
-        const text = this.bulkInput.value;
-        if (!text.trim()) {
-            alert('テキストを入力してください');
-            return;
-        }
+    // ==========================================
+    // 2. DATA PERSISTENCE
+    // ==========================================
 
-        if (!confirm('現在入力されているルーティンは全て上書きされますが、よろしいですか？')) {
-            return;
-        }
+    /**
+     * Consolidates all app state into a single JSON object in LocalStorage
+     */
+    _saveData() {
+        const data = {
+            routines: this.routines,
+            shiftHours: this.shiftHours,
+            memo: this.memoInput ? this.memoInput.value : "",
+            baseWakeupTime: this.baseWakeupTimeInput ? this.baseWakeupTimeInput.value : "05:00",
+            chimeType: this.chimeSelect ? this.chimeSelect.value : "none"
+        };
+        localStorage.setItem('routineData', JSON.stringify(data));
+    }
 
-        const lines = text.split('\n');
-        const newRoutines = [];
+    /**
+     * Restores app state from LocalStorage
+     */
+    _loadData() {
+        try {
+            const saved = localStorage.getItem('routineData');
+            if (!saved) return;
 
-        // Regex to capture: Activity Name (group 1), Start Time (group 2), End Time (group 3)
-        const regex = /(.+?)\s+(\d{1,2}:\d{2})\s*[-~]\s*(\d{1,2}:\d{2})/;
+            const data = JSON.parse(saved);
+            this.routines = data.routines || [];
+            this.shiftHours = data.shiftHours || 0;
 
-        lines.forEach(line => {
-            line = line.trim();
-            if (!line) return;
-
-            const match = line.match(regex);
-            if (match) {
-                const name = match[1].trim();
-                let start = match[2];
-                let end = match[3];
-
-                // Normalize single digit hours (e.g. 5:00 -> 05:00)
-                if (start.length === 4) start = '0' + start;
-                if (end.length === 4) end = '0' + end;
-
-                newRoutines.push({
-                    id: Date.now() + Math.random(), // Unique ID
-                    name,
-                    start,
-                    end,
-                    color: this.colors[newRoutines.length % this.colors.length]
-                });
+            if (this.memoInput && data.memo !== undefined) {
+                this.memoInput.value = data.memo;
             }
-        });
+            if (this.baseWakeupTimeInput && data.baseWakeupTime) {
+                this.baseWakeupTimeInput.value = data.baseWakeupTime;
+            }
+            if (this.chimeSelect && data.chimeType) {
+                this.chimeSelect.value = data.chimeType;
+            }
 
-        if (newRoutines.length === 0) {
-            alert('読み取り可能なデータが見つかりませんでした。\n形式: 活動名 開始時間-終了時間\n(例: 睡眠 22:00-05:00)');
-            return;
+            // Sync UI inputs with loaded state
+            this.shiftInput.value = this._decimalToOffsetStr(this.shiftHours);
+            if (this.shiftSlider) this.shiftSlider.value = this.shiftHours;
+
+        } catch (e) {
+            console.error("Data load failed. Storage might be corrupted.", e);
         }
+    }
 
-        this.routines = newRoutines;
+    // ==========================================
+    // 3. UI RENDERING & UPDATES
+    // ==========================================
+
+    _renderAll() {
         this.renderList();
         this.renderChart();
         this.updateShiftInfo();
-        this.saveData();
-
-        alert(`${newRoutines.length}件のルーティンを読み込みました。`);
-        this.bulkInput.value = ''; // Clear input if successful
+        this._updateCheckboxTimes();
     }
 
-    // --- 個別ルーティン管理 ---
-    addRoutine() {
-        const name = this.activityInput.value;
-        const start = this.startTimeInput.value;
-        const end = this.endTimeInput.value;
+    /**
+     * Updates current time display and background logic
+     */
+    _updatePeriodicTasks() {
+        // Redraw chart to update current time marker & central clock effectively
+        if (this.chart) this.chart.update();
 
-        if (!name || !start || !end) {
-            alert('全ての項目を入力してください。');
-            return;
-        }
-
-        const routine = {
-            id: Date.now(),
-            name,
-            start,
-            end,
-            color: this.colors[this.routines.length % this.colors.length]
-        };
-
-        this.routines.push(routine);
-        this.renderList();
-        this.renderChart();
-        this.updateShiftInfo();
-        this.saveData(); // Save new routine
-
-        // Clear inputs
-        this.activityInput.value = '';
+        // Background check for routine completion chime
+        this.checkChime();
     }
 
-    clearRoutines() {
-        if (!confirm('全てのデータを消去してもよろしいですか？')) return;
-        this.routines = [];
-        this.shiftHours = 0;
-        this.shiftInput.value = 0;
-        if (this.shiftSlider) this.shiftSlider.value = 0;
-
-        localStorage.removeItem('routineApp_data'); // Clear local storage
-
-        this.renderList();
-        this.renderChart();
-        this.updateShiftInfo();
-    }
-
-    deleteRoutine(id) {
-        this.routines = this.routines.filter(r => r.id !== id);
-        this.renderList();
-        this.renderChart();
-        this.updateShiftInfo();
-        this.saveData(); // Save after delete
-    }
-
-    // --- UI描画: スケジュールリスト ---
+    /**
+     * Renders the vertical list of original routines (right panel)
+     */
     renderList() {
         this.routineList.innerHTML = '';
         this.routines.sort((a, b) => a.start.localeCompare(b.start));
@@ -251,44 +210,31 @@ class RoutineApp {
         });
     }
 
-    timeToDecimal(timeStr) {
-        const [h, m] = timeStr.split(':').map(Number);
-        return h + m / 60;
-    }
-
-    // --- グラフ描画ロジック (Chart.js) ---
+    /**
+     * Main chart rendering logic using Chart.js
+     */
     renderChart() {
-        if (this.chart) {
-            this.chart.destroy();
-        }
+        if (this.chart) this.chart.destroy();
 
         const timeline = new Array(1440).fill(null);
 
+        // Map routines to minute-by-minute timeline
         this.routines.forEach(r => {
-            const startDec = this.timeToDecimal(r.start);
-            const endDec = this.timeToDecimal(r.end);
-
-            let startMin = Math.round(startDec * 60);
-            let endMin = Math.round(endDec * 60);
+            let startMin = Math.round(this._timeToDecimal(r.start) * 60);
+            let endMin = Math.round(this._timeToDecimal(r.end) * 60);
 
             if (startMin < endMin) {
-                for (let i = startMin; i < endMin; i++) {
-                    timeline[i] = r;
-                }
+                for (let i = startMin; i < endMin; i++) timeline[i] = r;
             } else {
-                for (let i = startMin; i < 1440; i++) {
-                    timeline[i] = r;
-                }
-                for (let i = 0; i < endMin; i++) {
-                    timeline[i] = r;
-                }
+                for (let i = startMin; i < 1440; i++) timeline[i] = r;
+                for (let i = 0; i < endMin; i++) timeline[i] = r;
             }
         });
 
+        // Convert timeline into Chart.js datasets (segments)
         const dataPoints = [];
         const bgColors = [];
         const labels = [];
-
         let currentRoutine = timeline[0];
         let currentDuration = 1;
 
@@ -317,104 +263,11 @@ class RoutineApp {
             labels.push(null);
         }
 
-        // Custom Plugin for Clock Face and Current Time
+        // Clock Face Plugin (Draws numbers and central clock)
         const clockPlugin = {
             id: 'clockFace',
-            afterDraw: (chart) => {
-                const { ctx, chartArea: { top, bottom, left, right, width, height } } = chart;
-                const centerX = (left + right) / 2;
-                const centerY = (top + bottom) / 2;
-                const outerRadius = Math.min(width, height) / 2;
-
-                ctx.save();
-                ctx.translate(centerX, centerY);
-
-                // 1. Draw Hour Ticks and Numbers
-                ctx.font = 'bold 14px Inter, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillStyle = '#e0e0e0';
-
-                // We want to draw numbers for all hours: 0-23
-                for (let i = 0; i < 24; i++) {
-                    const angle = (i * 15 - 90) * (Math.PI / 180);
-                    const isMajor = i % 3 === 0; // Show with outline every 3 hours
-
-                    const tickLength = isMajor ? 10 : 5;
-                    // const textRadius = outerRadius + 15;
-
-                    ctx.beginPath();
-                    // Draw ticks just inside/outside rim
-                    ctx.moveTo(Math.cos(angle) * (outerRadius - 25), Math.sin(angle) * (outerRadius - 25));
-                    ctx.lineTo(Math.cos(angle) * (outerRadius - 25 + tickLength), Math.sin(angle) * (outerRadius - 25 + tickLength));
-                    ctx.strokeStyle = isMajor ? '#bb86fc' : 'rgba(255, 255, 255, 0.3)';
-                    ctx.lineWidth = isMajor ? 2 : 1;
-                    ctx.stroke();
-
-                    // Draw Number
-                    const textX = Math.cos(angle) * (outerRadius - 10);
-                    const textY = Math.sin(angle) * (outerRadius - 10);
-
-                    if (isMajor) {
-                        // Major: Larger Font (16px), Black Outline + White Text
-                        ctx.font = '18px Inter, sans-serif'; // +2px larger
-                        ctx.lineWidth = 2;
-                        ctx.strokeStyle = '#820086ff'; // Black outline
-                        ctx.strokeText(i.toString(), textX, textY);
-                        ctx.fillStyle = '#ffffffff';
-                        ctx.fillText(i.toString(), textX, textY);
-                    } else {
-                        // Minor: Smaller Font (13px), White Text only (No outline)
-                        ctx.font = '14px Inter, sans-serif'; // -1px smaller
-                        ctx.fillStyle = '#cbcbcbcb';
-                        ctx.fillText(i.toString(), textX, textY);
-                    }
-                }
-
-                // 2. Draw Current Time Marker
-                const now = new Date();
-                const h = now.getHours();
-                const m = now.getMinutes();
-                const currentDec = h + m / 60;
-
-                const currentAngle = (currentDec * 15 - 90) * (Math.PI / 180);
-                const markerRadius = outerRadius - 40;
-
-                ctx.beginPath();
-                ctx.arc(Math.cos(currentAngle) * markerRadius, Math.sin(currentAngle) * markerRadius, 6, 0, Math.PI * 2);
-                ctx.fillStyle = '#03DAC6';
-                ctx.shadowColor = '#03DAC6';
-                ctx.shadowBlur = 10;
-                ctx.fill();
-                ctx.shadowBlur = 0;
-
-                // 3. Draw Center Time (Big Digital Clock)
-                ctx.fillStyle = '#03DAC6';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                // Adjust font size based on chart size, max 60px
-                const timeFontSize = Math.min(width, height) / 6;
-                ctx.font = `${timeFontSize}px 'Quicksand', sans-serif`; // Updated to Quicksand
-
-                // Calculate Base Time: Current Time - Shift Hours
-                const baseTime = new Date(now.getTime() - (this.shiftHours * 60 * 60 * 1000));
-                const timeStr = baseTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-
-                ctx.fillText(timeStr, 0, 0); // At center
-
-                // Optional label "基準時刻" above time (Reverted Style)
-                ctx.font = `${timeFontSize * 0.22}px 'Quicksand', sans-serif`; // Updated to Quicksand
-                ctx.fillStyle = '#aaaaaa';
-                ctx.fillText('基準時刻', 0, -timeFontSize * 0.8);
-
-                ctx.restore();
-            }
+            afterDraw: (chart) => this._drawClockFace(chart)
         };
-
-        const rotationVal = (this.shiftHours * 15);
-
-        // Capture colors for the scriptable option
-        const simpleBgColors = bgColors;
 
         this.chart = new Chart(this.ctx, {
             type: 'doughnut',
@@ -423,84 +276,33 @@ class RoutineApp {
                 datasets: [{
                     data: dataPoints,
                     borderWidth: 0,
-                    // Use scriptable background color for radial gradients
-                    backgroundColor: (context) => {
-                        const idx = context.dataIndex;
-                        const color = simpleBgColors[idx];
-
-                        // Handle Free Time (rgba) or missing color
-                        if (!color || color.startsWith('rgba')) {
-                            return color || 'rgba(0,0,0,0)';
-                        }
-
-                        const chart = context.chart;
-                        const { ctx, chartArea } = chart;
-                        if (!chartArea) return color;
-
-                        const centerX = (chartArea.left + chartArea.right) / 2;
-                        const centerY = (chartArea.top + chartArea.bottom) / 2;
-                        const outerRadius = Math.min(chartArea.width, chartArea.height) / 2;
-
-                        // Create gradient from center to outer edge
-                        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, outerRadius);
-
-                        // Helper: Hex to RGBA
-                        const hex2rgba = (hex, alpha) => {
-                            if (!hex || hex.length < 7) return hex;
-                            const r = parseInt(hex.slice(1, 3), 16);
-                            const g = parseInt(hex.slice(3, 5), 16);
-                            const b = parseInt(hex.slice(5, 7), 16);
-                            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-                        };
-
-                        try {
-                            // Gradient: Inner side darker, Outer side bright
-                            // 50% (Inner Edge): Darker/Transparent
-                            gradient.addColorStop(0.5, hex2rgba(color, 0.4));
-                            // 100% (Outer Edge): Full Color
-                            gradient.addColorStop(1, hex2rgba(color, 1));
-                            return gradient;
-                        } catch (e) {
-                            return color;
-                        }
-                    }
+                    backgroundColor: (ctx) => this._getSegmentGradient(ctx, bgColors)
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: false, // Turn off animation 
-                rotation: rotationVal,
-                layout: {
-                    padding: 5
-                },
+                animation: false,
+                rotation: this.shiftHours * 15,
+                layout: { padding: 35 },
                 plugins: {
-                    legend: {
-                        display: false
-                    },
+                    legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            label: function (context) {
+                            label: (context) => {
                                 const value = context.raw;
-                                const hours = Math.floor(value);
-                                const minutes = Math.round((value - hours) * 60);
-                                return `${context.chart.data.labels[context.dataIndex] || 'Free Time'}: ${hours}h ${minutes}m`;
+                                const h = Math.floor(value);
+                                const m = Math.round((value - h) * 60);
+                                return `${context.chart.data.labels[context.dataIndex] || 'Free Time'}: ${h}h ${m}m`;
                             }
                         }
                     },
                     datalabels: {
                         color: '#fff',
-                        font: {
-                            weight: 'normal',
-                            size: 15
-                        },
-                        formatter: (value, ctx) => {
-                            if (value < 1) return null;
-                            return ctx.chart.data.labels[ctx.dataIndex];
-                        },
+                        font: { size: 15 },
+                        formatter: (val, ctx) => (val < 1 ? null : ctx.chart.data.labels[ctx.dataIndex]),
                         display: 'auto',
-                        anchor: 'center',
-                        align: 'center'
+                        anchor: 'center', align: 'center'
                     },
                 }
             },
@@ -508,60 +310,142 @@ class RoutineApp {
         });
     }
 
-    // --- 状態更新: シフト計算とステータス表示 ---
+    /**
+     * Helper to draw clock UI over the chart
+     */
+    _drawClockFace(chart) {
+        const { ctx, chartArea: { top, bottom, left, right, width, height } } = chart;
+        const centerX = (left + right) / 2;
+        const centerY = (top + bottom) / 2;
+        const outerRadius = Math.min(width, height) / 2;
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+
+        // 1. Draw Hour Ticks and Numbers
+        for (let i = 0; i < 24; i++) {
+            const angle = (i * 15 - 90) * (Math.PI / 180);
+            const isMajor = i % 3 === 0;
+            const tickLength = isMajor ? 10 : 10;
+
+            // Tick marks (staying at current rim)
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(angle) * (outerRadius - 5), Math.sin(angle) * (outerRadius - 5));
+            ctx.lineTo(Math.cos(angle) * (outerRadius - 5 + tickLength), Math.sin(angle) * (outerRadius - 5 + tickLength));
+            ctx.strokeStyle = isMajor ? '#bb86fc' : 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = isMajor ? 2 : 1;
+            ctx.stroke();
+
+            // Hour numbers (MOVED OUTSIDE)
+            const textRadius = outerRadius + 14; // Positive offset to go outside
+            const textX = Math.cos(angle) * textRadius;
+            const textY = Math.sin(angle) * textRadius;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            if (isMajor) {
+                ctx.font = 'bold 16px Inter, sans-serif';
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#121212'; // Darker outline for contrast
+                ctx.strokeText(i.toString(), textX, textY);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(i.toString(), textX, textY);
+            } else {
+                ctx.font = '12px Inter, sans-serif';
+                ctx.fillStyle = '#aaaaaa';
+                ctx.fillText(i.toString(), textX, textY);
+            }
+        }
+
+        // 2. Draw Current Time Marker
+        const now = new Date();
+        const currentDec = now.getHours() + now.getMinutes() / 60;
+        const currentAngle = (currentDec * 15 - 90) * (Math.PI / 180);
+
+        ctx.beginPath();
+        ctx.arc(Math.cos(currentAngle) * (outerRadius + 4), Math.sin(currentAngle) * (outerRadius + 4), 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#03DAC6';
+        ctx.shadowColor = '#03DAC6';
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // 3. Central Digital Clock (Shows Base Time)
+        const timeFontSize = Math.min(width, height) / 5;
+        const baseTime = new Date(now.getTime() - (this.shiftHours * 60 * 60 * 1000));
+        const timeStr = baseTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+        ctx.fillStyle = '#03DAC6';
+        ctx.font = `${timeFontSize}px 'Quicksand', sans-serif`;
+        ctx.fillText(timeStr, 0, 0);
+
+        ctx.font = `${timeFontSize * 0.18}px 'Quicksand', sans-serif`;
+        ctx.fillStyle = '#aaaaaa';
+        ctx.fillText('基準時刻', 0, -timeFontSize * 0.6);
+
+        ctx.restore();
+    }
+
+    /**
+     * Unified Logic for applying shift changes
+     */
+    _applyShift(val, source = 'other') {
+        let numVal = typeof val === 'string' ? parseFloat(val) : val;
+        numVal = isNaN(numVal) ? 0 : numVal;
+        numVal = Math.max(-24, Math.min(24, numVal)); // Clamp
+
+        this.shiftHours = numVal;
+
+        // Sync Inputs
+        if (source !== 'input') {
+            this.shiftInput.value = this._decimalToOffsetStr(this.shiftHours);
+        }
+        if (source !== 'slider' && this.shiftSlider) {
+            this.shiftSlider.value = this.shiftHours;
+        }
+
+        this._renderAll();
+        this._saveData();
+    }
+
+    /**
+     * Updates the shifted schedule text list (left panel)
+     */
     updateShiftInfo() {
         const now = new Date();
-        const currentHours = now.getHours();
-        const currentMinutes = now.getMinutes();
-        const currentDecimal = currentHours + currentMinutes / 60;
-
+        const currentDecimal = now.getHours() + now.getMinutes() / 60;
         this.shiftedScheduleList.innerHTML = '';
 
-        let currentActivityName = "(Free Time)";
-        let currentActivityDuration = "";
+        let activeActivity = "(Free Time)";
+        let activeDuration = "";
 
-        const sortedRoutines = [...this.routines].sort((a, b) => a.start.localeCompare(b.start));
+        const sorted = [...this.routines].sort((a, b) => a.start.localeCompare(b.start));
 
-        sortedRoutines.forEach(r => {
-            let startDec = this.timeToDecimal(r.start);
-            let endDec = this.timeToDecimal(r.end);
+        sorted.forEach(r => {
+            const startDec = this._timeToDecimal(r.start);
+            const endDec = this._timeToDecimal(r.end);
 
             // Calculate Duration
-            let durationDec = endDec - startDec;
-            if (durationDec < 0) durationDec += 24;
-            const durH = Math.floor(durationDec);
-            const durM = Math.round((durationDec - durH) * 60);
-            const durationStr = `${durH}:${String(durM).padStart(2, '0')}`;
+            let dur = endDec - startDec;
+            if (dur < 0) dur += 24;
+            const durStr = this._decimalToHHMM(dur);
 
-            // Calculate Shifted Times
-            let shiftedStart = (startDec + this.shiftHours) % 24;
-            let shiftedEnd = (endDec + this.shiftHours) % 24;
+            // Shifted Range
+            const shiftedStart = this._normalizeHour(startDec + this.shiftHours);
+            const shiftedEnd = this._normalizeHour(endDec + this.shiftHours);
+            const timeRangeStr = `${this._decimalToHHMM(shiftedStart)} - ${this._decimalToHHMM(shiftedEnd)}`;
 
-            if (shiftedStart < 0) shiftedStart += 24;
-            if (shiftedEnd < 0) shiftedEnd += 24;
-
-            const formatTime = (val) => {
-                const h = Math.floor(val);
-                const m = Math.round((val - h) * 60);
-                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-            };
-
-            const timeStr = `${formatTime(shiftedStart)} - ${formatTime(shiftedEnd)}`;
+            // UI List Item
             const li = document.createElement('li');
-
-            // Apply flex styling for right alignment of duration
-            li.style.display = 'flex';
-            li.style.justifyContent = 'space-between';
-            li.style.alignItems = 'center';
-
+            li.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
             li.innerHTML = `
-                <div><span>${timeStr}</span>: <strong>${r.name}</strong></div>
-                <span style="opacity:0.7; font-size:0.9em;">(${durationStr})</span>
+                <div><span>${timeRangeStr}</span>: <strong>${r.name}</strong></div>
+                <span style="opacity:0.7; font-size:0.9em;">(${durStr})</span>
             `;
             this.shiftedScheduleList.appendChild(li);
 
+            // Active Check
             let isActive = false;
-
             if (shiftedStart < shiftedEnd) {
                 if (currentDecimal >= shiftedStart && currentDecimal < shiftedEnd) isActive = true;
             } else {
@@ -569,201 +453,257 @@ class RoutineApp {
             }
 
             if (isActive) {
-                currentActivityName = r.name;
-                currentActivityDuration = durationStr;
+                activeActivity = r.name;
+                activeDuration = durStr;
             }
         });
 
-        if (currentActivityName.includes("Free Time")) {
-            this.statusDisplay.textContent = currentActivityName;
-            this.statusDisplay.style.color = "#aaa";
-        } else {
-            this.statusDisplay.textContent = `${currentActivityName} (${currentActivityDuration})`;
-            this.statusDisplay.style.color = "#bb86fc";
-        }
+        // Status Banner Update
+        this.statusDisplay.textContent = activeActivity === "(Free Time)" ? activeActivity : `${activeActivity} (${activeDuration})`;
+        this.statusDisplay.style.color = activeActivity === "(Free Time)" ? "#aaa" : "#bb86fc";
     }
 
-    updateTimeDisplay() {
-        // Time is now updated via Chart redraw (clockFace plugin)
-        if (this.chart) this.chart.update();
+    /**
+     * Updates the live ticking times for checkboxes in the UI
+     */
+    _updateCheckboxTimes() {
+        if (!this.baseWakeupTimeInput) return;
 
-        // Check for routine end chime
-        this.checkChime();
+        const baseDec = this._timeToDecimal(this.baseWakeupTimeInput.value);
+
+        this.dynamicTimeSpans.forEach(span => {
+            const offset = parseFloat(span.getAttribute('data-offset'));
+            const targetDec = this._normalizeHour(baseDec + offset + this.shiftHours);
+            span.textContent = this._decimalToHHMM(targetDec);
+        });
     }
 
-    // --- Audio Logic ---
-    initAudio() {
-        if (!this.audioCtx) {
-            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (this.audioCtx.state === 'suspended') {
-            this.audioCtx.resume();
-        }
+    // ==========================================
+    // 4. ACTION HANDLERS
+    // ==========================================
+
+    importFromText() {
+        const text = this.bulkInput.value.trim();
+        if (!text) return alert('テキストを入力してください');
+        if (!confirm('既存のデータは上書きされます。よろしいですか？')) return;
+
+        const newRoutines = [];
+        const regex = /(.+?)\s+(\d{1,2}:\d{2})\s*[-~]\s*(\d{1,2}:\d{2})/;
+
+        text.split('\n').forEach(line => {
+            const match = line.trim().match(regex);
+            if (match) {
+                const name = match[1].trim();
+                let start = match[2].padStart(5, '0');
+                let end = match[3].padStart(5, '0');
+
+                newRoutines.push({
+                    id: Date.now() + Math.random(),
+                    name, start, end,
+                    color: this.colors[newRoutines.length % this.colors.length]
+                });
+            }
+        });
+
+        if (newRoutines.length === 0) return alert('読み取り可能なデータが見つかりませんでした。');
+
+        this.routines = newRoutines;
+        this.bulkInput.value = '';
+        this._renderAll();
+        this._saveData();
+    }
+
+    addRoutine() {
+        const name = this.activityInput.value;
+        const start = this.startTimeInput.value;
+        const end = this.endTimeInput.value;
+
+        if (!name || !start || !end) return alert('全ての項目を入力してください。');
+
+        this.routines.push({
+            id: Date.now(),
+            name, start, end,
+            color: this.colors[this.routines.length % this.colors.length]
+        });
+
+        this.activityInput.value = '';
+        this._renderAll();
+        this._saveData();
+    }
+
+    clearRoutines() {
+        if (!confirm('全てのデータを消去してもよろしいですか？')) return;
+        this.routines = [];
+        this.shiftHours = 0;
+        this._renderAll();
+        localStorage.removeItem('routineData'); // Clear storage
+    }
+
+    deleteRoutine(id) {
+        this.routines = this.routines.filter(r => r.id !== id);
+        this._renderAll();
+        this._saveData();
+    }
+
+    // ==========================================
+    // 5. AUDIO LOGIC
+    // ==========================================
+
+    _initAudio() {
+        if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
     }
 
     playChime() {
-        if (!this.chimeSelect || this.chimeSelect.value === 'none') return;
+        const type = this.chimeSelect ? this.chimeSelect.value : 'none';
+        if (type === 'none') return;
 
-        this.initAudio();
+        this._initAudio();
         const ctx = this.audioCtx;
         const now = ctx.currentTime;
-        const type = this.chimeSelect.value;
+
+        const playOsc = (freq, type, gainVal, decay, delay = 0) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now + delay);
+            g.gain.setValueAtTime(0, now + delay);
+            g.gain.linearRampToValueAtTime(gainVal, now + delay + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, now + delay + decay);
+            osc.connect(g);
+            g.connect(ctx.destination);
+            osc.start(now + delay);
+            osc.stop(now + delay + decay);
+        };
 
         if (type === 'bell') {
-            // Rich Soft Bell
-            const frequencies = [440, 880, 1320];
-            const gains = [0.2, 0.1, 0.05];
-            frequencies.forEach((freq, i) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq, now);
-                osc.frequency.exponentialRampToValueAtTime(freq * 0.99, now + 1.5);
-                gain.gain.setValueAtTime(0, now);
-                gain.gain.linearRampToValueAtTime(gains[i], now + 0.05);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start(now);
-                osc.stop(now + 1.5);
-            });
+            [440, 880, 1320].forEach((f, i) => playOsc(f, 'sine', [0.2, 0.1, 0.05][i], 1.5));
         } else if (type === 'ding') {
-            // Simple Ding
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(1200, now);
-            osc.frequency.exponentialRampToValueAtTime(800, now + 0.6);
-            gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.2, now + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(now);
-            osc.stop(now + 0.6);
+            playOsc(1200, 'triangle', 0.2, 0.6);
         } else if (type === 'marimba') {
-            // Marimba-like
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(660, now);
-            gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.4, now + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(now);
-            osc.stop(now + 0.3);
+            playOsc(660, 'sine', 0.4, 0.3);
         } else if (type === 'digital') {
-            // Digital Blip
-            [0, 0.12].forEach(delay => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(1500, now + delay);
-                gain.gain.setValueAtTime(0, now + delay);
-                gain.gain.linearRampToValueAtTime(0.1, now + delay + 0.01);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.08);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start(now + delay);
-                osc.stop(now + delay + 0.1);
-            });
+            playOsc(1500, 'square', 0.1, 0.1, 0);
+            playOsc(1500, 'square', 0.1, 0.1, 0.12);
         }
     }
 
     checkChime() {
-        if (!this.chimeSelect || this.chimeSelect.value === 'none') return;
+        const type = this.chimeSelect ? this.chimeSelect.value : 'none';
+        if (type === 'none') return;
 
         const now = new Date();
-        const currentMinute = now.getMinutes();
-        const currentHour = now.getHours();
+        const currentDecimal = now.getHours() + now.getMinutes() / 60;
 
-        // Prevent double trigger in the same minute
-        if (currentMinute === this.lastChimeMinute) return;
-
-        const currentDecimal = currentHour + currentMinute / 60;
-
-        // Target: Routines ending exactly now (shifted)
-        this.routines.forEach(r => {
-            const endDec = this.timeToDecimal(r.end);
-            let shiftedEnd = (endDec + this.shiftHours) % 24;
-            if (shiftedEnd < 0) shiftedEnd += 24;
-
-            // Threshold: 0.5 minutes (to catch the transition in the update loop)
-            const diff = Math.abs(currentDecimal - shiftedEnd);
-            // Multi-minute routines wrap correctly, decimal hours are fine.
-            // Check if current HH:MM matches shiftedEnd HH:MM precisely
-            const shiftEndH = Math.floor(shiftedEnd);
-            const shiftEndM = Math.round((shiftedEnd - shiftEndH) * 60) % 60;
-
-            if (currentHour === shiftEndH && currentMinute === shiftEndM) {
-                this.playChime();
-                this.lastChimeMinute = currentMinute;
-            }
-        });
-    }
-
-    // --- データ保存 (LocalStorage) ---
-    saveData() {
-        const data = {
-            routines: this.routines,
-            shiftHours: this.shiftHours,
-            memo: this.memoInput ? this.memoInput.value : "",
-            baseWakeupTime: this.baseWakeupTimeInput ? this.baseWakeupTimeInput.value : "05:00",
-            chimeType: this.chimeSelect ? this.chimeSelect.value : "none"
-        };
-        localStorage.setItem('routineData', JSON.stringify(data));
-    }
-
-    loadData() {
-        const saved = localStorage.getItem('routineData');
-        if (saved) {
-            const data = JSON.parse(saved);
-            this.routines = data.routines || [];
-            this.shiftHours = data.shiftHours || 0;
-            if (this.memoInput && data.memo !== undefined) {
-                this.memoInput.value = data.memo;
-            }
-            if (this.baseWakeupTimeInput && data.baseWakeupTime) {
-                this.baseWakeupTimeInput.value = data.baseWakeupTime;
-            }
-            if (this.chimeSelect && data.chimeType) {
-                this.chimeSelect.value = data.chimeType;
-            }
-            if (this.shiftInput) {
-                this.shiftInput.value = this.shiftHours;
-            }
-            if (this.shiftSlider) {
-                this.shiftSlider.value = this.shiftHours;
-            }
+        // Initialize lastCheck if first time
+        if (this.lastCheckDecimal === undefined) {
+            this.lastCheckDecimal = currentDecimal;
+            return;
         }
-        this.updateCheckboxTimes();
+
+        // If time hasn't changed, skip
+        if (currentDecimal === this.lastCheckDecimal) return;
+
+        this.routines.forEach(r => {
+            const endDec = this._timeToDecimal(r.end);
+            const shiftedEnd = this._normalizeHour(endDec + this.shiftHours);
+
+            // "Range/Passage" Logic: Did we cross the shiftedEnd?
+            let crossed = false;
+
+            if (currentDecimal > this.lastCheckDecimal) {
+                // Normal case: Check if shiftedEnd falls between [last, current]
+                if (shiftedEnd > this.lastCheckDecimal && shiftedEnd <= currentDecimal) crossed = true;
+            } else {
+                // Midnight wrap case: Check [last, 24] or [0, current]
+                if (shiftedEnd > this.lastCheckDecimal || shiftedEnd <= currentDecimal) crossed = true;
+            }
+
+            if (crossed) {
+                console.log(`Chime triggered: ${r.name} at ${this._decimalToHHMM(shiftedEnd)} (Range check)`);
+                this.playChime();
+            }
+        });
+
+        this.lastCheckDecimal = currentDecimal;
     }
 
-    // --- Dynamic Checkbox Time Update ---
-    updateCheckboxTimes() {
-        if (!this.baseWakeupTimeInput) return;
+    // ==========================================
+    // 6. UTILITIES
+    // ==========================================
 
-        const baseTimeStr = this.baseWakeupTimeInput.value;
-        const [baseH, baseM] = baseTimeStr.split(':').map(Number);
-        const baseTotalHours = baseH + baseM / 60;
+    _timeToDecimal(str) {
+        const [h, m] = str.split(':').map(Number);
+        return h + m / 60;
+    }
 
-        this.dynamicTimeSpans.forEach(span => {
-            const offset = parseFloat(span.getAttribute('data-offset'));
-            // Formula: Base + Offset + Shift
-            let targetTotalHours = baseTotalHours + offset + this.shiftHours;
+    _decimalToHHMM(dec) {
+        const h = Math.floor(dec) % 24;
+        const m = Math.round((dec - Math.floor(dec)) * 60) % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
 
-            // Normalize to 0-24 range
-            targetTotalHours = targetTotalHours % 24;
-            if (targetTotalHours < 0) targetTotalHours += 24;
+    _normalizeHour(h) {
+        let val = h % 24;
+        return val < 0 ? val + 24 : val;
+    }
 
-            const targetH = Math.floor(targetTotalHours);
-            const targetM = Math.round((targetTotalHours - targetH) * 60);
+    /**
+     * Formats decimal hours to ±HH:MM format for display
+     */
+    _decimalToOffsetStr(dec) {
+        const sign = dec >= 0 ? "+" : "-";
+        const absDec = Math.abs(dec);
+        const h = Math.floor(absDec);
+        const m = Math.round((absDec - h) * 60);
+        return `${sign}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
 
-            span.textContent = `${String(targetH).padStart(2, '0')}:${String(targetM).padStart(2, '0')}`;
-        });
+    /**
+     * Parses ±HH:MM or decimal format back to decimal hours
+     */
+    _offsetStrToDecimal(str) {
+        if (!str) return 0;
+        str = str.trim();
+
+        // Handle HH:MM format (maybe with ± prefix)
+        const timeMatch = str.match(/^([+-])?(\d{1,2}):(\d{2})$/);
+        if (timeMatch) {
+            const isNegative = timeMatch[1] === "-";
+            const h = parseInt(timeMatch[2], 10);
+            const m = parseInt(timeMatch[3], 10);
+            const dec = h + m / 60;
+            return isNegative ? -dec : dec;
+        }
+
+        // Fallback to simple decimal parsing
+        return parseFloat(str) || 0;
+    }
+
+    _getSegmentGradient(ctx, colors) {
+        const { chart, dataIndex } = ctx;
+        const color = colors[dataIndex];
+        if (!color || color.startsWith('rgba')) return color;
+
+        const { chartArea } = chart;
+        if (!chartArea) return color;
+
+        const cX = (chartArea.left + chartArea.right) / 2;
+        const cY = (chartArea.top + chartArea.bottom) / 2;
+        const r = Math.min(chartArea.width, chartArea.height) / 2;
+
+        const gradient = chart.ctx.createRadialGradient(cX, cY, 0, cX, cY, r);
+
+        const hexToRgba = (hex, a) => {
+            const res = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return res ? `rgba(${parseInt(res[1], 16)}, ${parseInt(res[2], 16)}, ${parseInt(res[3], 16)}, ${a})` : hex;
+        };
+
+        gradient.addColorStop(0.5, hexToRgba(color, 0.4));
+        gradient.addColorStop(1, hexToRgba(color, 1));
+        return gradient;
     }
 }
 
+// Global initialization
 const app = new RoutineApp();

@@ -83,10 +83,11 @@
                     <div class="shift-control-panel">
                         <label class="shift-label">時間をずらす
                             (時間)</label>
-                        <input type="range" id="shiftSlider" class="shift-range" value="0" min="-24" max="24" step="1">
+                        <input type="range" id="shiftSlider" class="shift-range" value="0" min="-24" max="24"
+                            step="0.5">
                         <div class="shift-controls-row">
                             <button id="shiftMinus" class="btn-icon">-</button>
-                            <input type="number" id="shiftHours" value="0" min="-24" max="24">
+                            <input type="text" id="shiftHours" value="+00:00" placeholder="±HH:MM">
                             <button id="shiftPlus" class="btn-icon">+</button>
                         </div>
                     </div>
