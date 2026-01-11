@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daily Routine Shifter</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Quicksand:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 </head>
@@ -26,11 +28,13 @@
                             <span style="opacity: 0.8;">ℹ️</span> 使い方ガイド
                         </a>
                     </div>
-                    
+
                     <!-- Memo Field -->
                     <div style="margin-top: 1.5rem;">
-                        <label for="memoInput" style="display:block; color:var(--text-color); font-size:1rem; margin-bottom:0.5rem; opacity:0.9;">Memo</label>
-                        <textarea id="memoInput" class="memo-area" placeholder="(Todoやちょっとした申し送り事項のメモを、ここに置いておくことができます)"></textarea>
+                        <label for="memoInput"
+                            style="display:block; color:var(--text-color); font-size:1rem; margin-bottom:0.5rem; opacity:0.9;">Memo</label>
+                        <textarea id="memoInput" class="memo-area"
+                            placeholder="(Todoやちょっとした申し送り事項のメモを、ここに置いておくことができます)"></textarea>
                     </div>
                 </header>
             </section>
@@ -45,7 +49,7 @@
                 <section class="shift-section">
                     <!-- <h2>シフト設定</h2> -->
                     <div class="shift-control-panel">
-                        <label style="margin-bottom:0.5rem; display:block; color:var(--secondary-color);">時間をずらす
+                        <label class="shift-label">時間をずらす
                             (時間)</label>
                         <input type="range" id="shiftSlider" class="shift-range" value="0" min="-24" max="24" step="1">
                         <div class="shift-controls-row">

@@ -63,6 +63,9 @@ h1 {
     font-size: 1.5rem;
     color: var(--primary-color);
     margin: 0;
+    font-weight: bold;
+    font-family: 'Quicksand', sans-serif;
+    /* Applied Requested Font */
 }
 
 h2 {
@@ -70,6 +73,7 @@ h2 {
     color: var(--secondary-color);
     margin-top: 0;
     margin-bottom: 1rem;
+    font-weight: normal;
 }
 
 p {
@@ -119,7 +123,7 @@ p {
     /* Smaller text "0.85" - User asked about this */
     resize: vertical;
     /* Allow vertical resize */
-    min-height: 60px;
+    min-height: 75px;
     /* Default height */
 }
 
@@ -136,7 +140,7 @@ p {
 
 .status-highlight {
     font-size: 1.3rem;
-    font-weight: bold;
+    font-weight: normal;
     color: var(--primary-color);
     text-align: center;
     padding: 1rem;
@@ -209,6 +213,15 @@ p {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+}
+
+.shift-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--secondary-color);
+    font-size: 1.1rem;
+    /* Match h2 */
+    font-weight: normal;
 }
 
 .shift-controls-row {
@@ -306,6 +319,8 @@ textarea {
     font-family: var(--font-family);
     width: 100%;
     box-sizing: border-box;
+    font-size: 1.0rem;
+    /* Match other inputs */
 }
 
 textarea {
