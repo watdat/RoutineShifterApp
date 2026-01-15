@@ -454,25 +454,6 @@ button:active {
     color: #555;
 }
 
-.sync-status.processing {
-    color: var(--primary-color);
-    animation: sync-blink 0.8s infinite alternate;
-}
-
-@keyframes sync-blink {
-    0% {
-        opacity: 0.3;
-        transform: scale(0.8);
-    }
-
-    100% {
-        opacity: 1;
-        transform: scale(1.2);
-        color: var(--secondary-color);
-        text-shadow: 0 0 10px var(--secondary-color);
-    }
-}
-
 .sync-controls input {
     margin: 0;
 }

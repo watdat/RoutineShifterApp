@@ -227,7 +227,7 @@ class RoutineApp {
         // Auto-save to cloud if sync is active (with debounce to avoid rate limits)
         if (this.syncId && this.ghToken) {
             if (this.syncTimer) clearTimeout(this.syncTimer);
-            this.syncTimer = setTimeout(() => this._saveToCloud(false), 3000); // Reduced to 3 sec delay
+            this.syncTimer = setTimeout(() => this._saveToCloud(false), 5000); // 5 sec delay
         }
     }
 
@@ -746,15 +746,8 @@ class RoutineApp {
     // 6. CLOUD SYNC LOGIC (REST API)
     // ==========================================
 
-    _updateSyncStatus(isProcessing = false) {
+    _updateSyncStatus() {
         if (!this.syncStatus) return;
-
-        if (isProcessing) {
-            this.syncStatus.className = 'sync-status processing';
-            this.syncStatus.textContent = '●';
-            return;
-        }
-
         if (this.syncId && this.ghToken) {
             this.syncStatus.className = 'sync-status active';
             this.syncStatus.textContent = '●';
@@ -790,14 +783,7 @@ class RoutineApp {
             'Accept': 'application/vnd.github.v3+json',
             'Content-Type': 'application/json'
         };
-
-        // Cache busting for GET requests
-        let finalUrl = url;
-        if ((!options.method || options.method === 'GET') && !url.includes('?')) {
-            finalUrl += `?t=${Date.now()}`;
-        }
-
-        const resp = await fetch(finalUrl, { ...options, headers });
+        const resp = await fetch(url, { ...options, headers });
         if (resp.status === 401) throw new Error("GitHubトークンが無効、または有効期限切れです");
         if (!resp.ok) {
             const errData = await resp.json().catch(() => ({}));
@@ -819,7 +805,7 @@ class RoutineApp {
         const id = this._sanitizeId(idRaw);
         this.syncId = id;
         this.ghToken = token;
-        this._updateSyncStatus(true); // START PROCESSING (Blinking)
+        this._updateSyncStatus();
 
         // Explicitly clean the data before sending to GitHub to prevent auto-revocation
         let cleanData = {};
@@ -855,7 +841,7 @@ class RoutineApp {
                 resp = await this._githubFetch(`https://api.github.com/gists/${targetGistId}`, {
                     method: 'PATCH',
                     body: JSON.stringify({
-                        description: `RoutineShifter Sync: ${id} (Updated: ${new Date().toLocaleString()})`,
+                        description: `RoutineShifter Sync: ${id}`,
                         files: { [filename]: { content: dataStr } }
                     })
                 });
@@ -864,7 +850,7 @@ class RoutineApp {
                 resp = await this._githubFetch("https://api.github.com/gists", {
                     method: 'POST',
                     body: JSON.stringify({
-                        description: `RoutineShifter Sync: ${id} (Created: ${new Date().toLocaleString()})`,
+                        description: `RoutineShifter Sync: ${id}`,
                         public: false,
                         files: { [filename]: { content: dataStr } }
                     })
@@ -881,8 +867,6 @@ class RoutineApp {
         } catch (e) {
             console.error("GitHub sync save failed", e);
             if (manual) alert(`保存に失敗しました:\n${e.message}\nもし「Secondary Rate Limit」と出た場合は、数分待ってからお試しください。`);
-        } finally {
-            this._updateSyncStatus(); // END PROCESSING
         }
     }
 
@@ -896,7 +880,6 @@ class RoutineApp {
         const id = this._sanitizeId(idRaw);
         const filename = `rs-sync-${id}.json`;
         this.ghToken = token;
-        this._updateSyncStatus(true); // START PROCESSING (Blinking)
 
         try {
             // Search for Gist
@@ -926,13 +909,11 @@ class RoutineApp {
                     alert("データの読み込みが完了しました！");
                 }
             } else {
-                alert(`ID: ${id} のデータが見つかりませんでした。先に保存側のブラウザで「手動保存」または自動保存（変更後3秒待機）が完了しているかご確認ください。`);
+                alert(`ID 「${id}」 のデータはGitHub上に見つかりませんでした。`);
             }
         } catch (e) {
             console.error("GitHub sync load failed", e);
             alert(`読み込みに失敗しました:\n${e.message}`);
-        } finally {
-            this._updateSyncStatus(); // END PROCESSING
         }
     }
 
