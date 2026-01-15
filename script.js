@@ -758,7 +758,18 @@ class RoutineApp {
         this.ghToken = token;
         this._updateSyncStatus();
 
-        const dataStr = localStorage.getItem('routineData');
+        // Explicitly clean the data before sending to GitHub to prevent auto-revocation
+        let cleanData = {};
+        try {
+            const raw = localStorage.getItem('routineData');
+            if (raw) {
+                cleanData = JSON.parse(raw);
+                delete cleanData.ghToken; // STRIP TOKEN BEFORE SENDING
+            }
+        } catch (e) {
+            console.error("Failed to parse data for clean save", e);
+        }
+        const dataStr = JSON.stringify(cleanData);
         const filename = `rs-sync-${id}.json`;
 
         try {
