@@ -102,6 +102,7 @@ class RoutineApp {
         this.loadSyncBtn = document.getElementById('loadSyncBtn');
         this.pushSyncBtn = document.getElementById('pushSyncBtn');
         this.ghTokenInput = document.getElementById('ghTokenInput');
+        this.ghTokenWrapper = document.getElementById('ghTokenWrapper');
         this.syncStatus = document.getElementById('syncStatus');
     }
 
@@ -156,6 +157,25 @@ class RoutineApp {
                 this._saveData();
                 this._updateSyncStatus();
             });
+            // Visual feedback: Fade out when not focused and has a value
+            this.ghTokenInput.addEventListener('focus', () => {
+                this.ghTokenWrapper.style.opacity = "1";
+                this.ghTokenInput.style.color = "white";
+            });
+            this.ghTokenInput.addEventListener('blur', () => {
+                this._updateTokenVisibility();
+            });
+        }
+    }
+
+    _updateTokenVisibility() {
+        if (!this.ghTokenInput || !this.ghTokenWrapper) return;
+        if (this.ghTokenInput.value) {
+            this.ghTokenWrapper.style.opacity = "0.4"; // Muted but visible
+            this.ghTokenInput.style.color = "rgba(255,255,255,0.4)";
+        } else {
+            this.ghTokenWrapper.style.opacity = "0.75"; // Ready to enter
+            this.ghTokenInput.style.color = "white";
         }
     }
 
@@ -215,7 +235,10 @@ class RoutineApp {
             this.syncId = data.syncId || "";
             this.ghToken = localStorage.getItem('rs_gh_token') || ""; // Separate key
             if (this.syncIdInput) this.syncIdInput.value = this.syncId;
-            if (this.ghTokenInput) this.ghTokenInput.value = this.ghToken;
+            if (this.ghTokenInput) {
+                this.ghTokenInput.value = this.ghToken;
+                this._updateTokenVisibility();
+            }
             this._updateSyncStatus();
 
             if (data.wakeChecks) {
