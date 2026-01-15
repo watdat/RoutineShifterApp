@@ -7,7 +7,7 @@
     --primary-color: #bb86fc;
     --secondary-color: #03dac6;
     --accent-color: #cf6679;
-    --font-family: 'Inter', sans-serif;
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 /* --- 基本設定 (リセット・背景) --- */
@@ -64,8 +64,10 @@ h1 {
     color: var(--primary-color);
     margin: 0;
     font-weight: bold;
-    font-family: 'Quicksand', sans-serif;
-    /* Applied Requested Font */
+    font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    /* Prevent layout jump by giving title a bit of space */
+    min-height: 1.8rem;
+    display: block;
 }
 
 h2 {
@@ -434,7 +436,7 @@ button:active {
 
 /* --- クラウド同期UI --- */
 .sync-section {
-    margin-top: 0.5rem;
+    /* margin-top removed to align with sidebar top */
 }
 
 .sync-status {

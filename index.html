@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daily Routine Shifter</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Quicksand:wght@300;400;500;700&display=swap"
         rel="stylesheet">
@@ -69,7 +71,7 @@
                 </header>
             </section>
 
-            <!-- Chart Panel (Moved here) -->
+            <!-- Chart Panel -->
             <section class="chart-area glass-panel">
                 <canvas id="routineChart"></canvas>
             </section>
@@ -83,10 +85,8 @@
                             ℹ️ 使い方ガイド
                         </a>
                     </div>
-                    <!-- <h2>シフト設定</h2> -->
                     <div class="shift-control-panel">
-                        <label class="shift-label">時間をずらす
-                            (時間)</label>
+                        <label class="shift-label">時間をずらす (時間)</label>
                         <input type="range" id="shiftSlider" class="shift-range" value="0" min="-24" max="24"
                             step="0.5">
                         <div class="shift-controls-row">
@@ -101,10 +101,8 @@
 
                 <section class="status-section">
                     <h2>シフト後の今の活動</h2>
-                    <!-- Removed time from here, will be in chart -->
                     <div id="shiftedActivity" class="status-highlight">特に無し (Free Time)</div>
                 </section>
-
 
                 <section class="list-section">
                     <h2>シフト後のスケジュール一覧</h2>
@@ -115,45 +113,40 @@
             </section>
         </aside>
 
-        <!-- Main Content: Inputs (Vertical) -->
+        <!-- Main Content: Inputs -->
         <main class="main-content">
-            <!-- Top: Chart (Removed/Moved) -->
-
-            <!-- Bottom: Inputs (Stacked) -->
             <div class="input-area">
-                <!-- Cloud Sync (Refined UI) -->
+                <!-- Cloud Sync (Refined UI Match Mockup) -->
                 <section class="sync-section glass-panel">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
                         <h2 style="margin:0;">クラウド同期 (GitHub)</h2>
+                        <!-- Token Input (Compact vertical size, aligned right width) -->
+                        <div id="ghTokenWrapper" style="width: calc(50% - 0.4rem); transition: all 0.3s; opacity: 0.65;">
+                            <input type="password" id="ghTokenInput" placeholder="共有鍵 (初回のみ)"
+                                style="width:100%; font-size:0.7rem; padding:6px 10px; background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.6); border:1px solid var(--panel-border); border-radius:6px; outline:none; box-sizing: border-box;">
+                        </div>
                     </div>
-
-                    <div class="sync-controls">
-                        <!-- Inputs: ID (First) and Token (Second, Subtle) -->
-                        <div style="display:flex; gap:10px; margin-bottom: 12px; align-items: center;">
-                            <!-- ID Input with Status Indicator inside -->
+                    
+                    <div class="sync-controls" style="display:flex; flex-direction:column; gap:0.8rem;">
+                        <!-- Row 1: ID Input & Load -->
+                        <div style="display:flex; gap:0.8rem; align-items: center;">
                             <div style="flex:1; position:relative; display:flex; align-items:center;">
                                 <span id="syncStatus" class="sync-status inactive"
-                                    style="position:absolute; left:12px; font-size:12px; cursor:default; z-index:10; transition: color 0.3s ease;"
+                                    style="position:absolute; left:12px; font-size:12px; cursor:default; z-index:10;"
                                     title="同期オフ">●</span>
                                 <input type="text" id="syncIdInput" placeholder="同期ID (スマホと共有する名前)"
-                                    style="width:100%; font-size:0.85rem; padding:8px 12px 8px 30px; border-radius: 8px;">
+                                    style="width:100%; font-size:1.0rem; padding:0.8rem 1rem 0.8rem 30px; border-radius: 8px;">
                             </div>
-
-                            <!-- Token Input (Compact & Subtle) -->
-                            <div id="ghTokenWrapper" style="width:130px; transition: all 0.3s; opacity: 0.5;">
-                                <input type="password" id="ghTokenInput" placeholder="共有鍵 (初回のみ)"
-                                    style="width:100%; font-size:0.75rem; padding:8px; background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.4); border:1px solid var(--panel-border); border-radius:8px; outline:none;">
-                            </div>
+                            <button id="loadSyncBtn" class="btn-primary"
+                                style="width:80px; font-size:1.0rem; padding:0.8rem;">読込</button>
                         </div>
 
-                        <!-- Buttons Row -->
-                        <div style="display:flex; justify-content:space-between; gap:10px;">
+                        <!-- Row 2: Helper Buttons -->
+                        <div style="display:flex; gap:0.8rem;">
                             <button id="genSyncIdBtn" class="btn-secondary"
-                                style="flex:1; font-size:0.8rem; padding:8px;">新規ID</button>
-                            <button id="loadSyncBtn" class="btn-primary"
-                                style="flex:1; font-size:0.8rem; padding:8px;">読込</button>
+                                style="flex:1; font-size:1.0rem; padding:0.8rem;">新規ID作成</button>
                             <button id="pushSyncBtn" class="btn-secondary"
-                                style="flex:1; font-size:0.8rem; padding:8px;">手動保存</button>
+                                style="flex:1; font-size:1.0rem; padding:0.8rem;">手動保存</button>
                         </div>
                     </div>
                 </section>
@@ -170,9 +163,7 @@
                         <button id="addBtn" class="btn-primary">追加</button>
                         <button id="clearBtn" class="btn-secondary">クリア</button>
                     </div>
-                    <div id="routineList" class="routine-list">
-                        <!-- Added routines will appear here -->
-                    </div>
+                    <div id="routineList" class="routine-list"></div>
                 </section>
 
                 <!-- Bulk Import -->

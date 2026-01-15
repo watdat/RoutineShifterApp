@@ -108,15 +108,23 @@ class RoutineApp {
 
     _addEventListeners() {
         // Routing Management
-        this.addBtn.addEventListener('click', () => this.addRoutine());
-        this.clearBtn.addEventListener('click', () => this.clearRoutines());
-        this.importBtn.addEventListener('click', () => this.importFromText());
+        if (this.addBtn) this.addBtn.addEventListener('click', () => this.addRoutine());
+        if (this.clearBtn) this.clearBtn.addEventListener('click', () => this.clearRoutines());
+        if (this.importBtn) this.importBtn.addEventListener('click', () => this.importFromText());
 
         // Shift Controls
-        this.shiftInput.addEventListener('change', (e) => this._applyShift(this._offsetStrToDecimal(e.target.value), 'input'));
-        this.shiftSlider.addEventListener('input', (e) => this._applyShift(e.target.value, 'slider'));
-        this.shiftMinus.addEventListener('click', () => this._applyShift(this.shiftHours - 0.5));
-        this.shiftPlus.addEventListener('click', () => this._applyShift(this.shiftHours + 0.5));
+        if (this.shiftInput) {
+            this.shiftInput.addEventListener('change', (e) => this._applyShift(this._offsetStrToDecimal(e.target.value), 'input'));
+        }
+        if (this.shiftSlider) {
+            this.shiftSlider.addEventListener('input', (e) => this._applyShift(e.target.value, 'slider'));
+        }
+        if (this.shiftMinus) {
+            this.shiftMinus.addEventListener('click', () => this._applyShift(this.shiftHours - 0.5));
+        }
+        if (this.shiftPlus) {
+            this.shiftPlus.addEventListener('click', () => this._applyShift(this.shiftHours + 0.5));
+        }
 
         // Settings / Customization
         if (this.baseWakeupTimeInput) {
@@ -141,16 +149,27 @@ class RoutineApp {
         }
 
         // Wake Checkbox persistence
-        this.wakeCheckboxes.forEach(cb => {
-            if (cb) {
-                cb.addEventListener('change', () => this._saveData());
-            }
-        });
+        if (this.wakeCheckboxes) {
+            this.wakeCheckboxes.forEach(cb => {
+                if (cb) {
+                    cb.addEventListener('change', () => this._saveData());
+                }
+            });
+        }
 
         // Sync Controls
         if (this.genSyncIdBtn) this.genSyncIdBtn.addEventListener('click', () => this._generateSyncId());
         if (this.loadSyncBtn) this.loadSyncBtn.addEventListener('click', () => this._loadFromCloud());
         if (this.pushSyncBtn) this.pushSyncBtn.addEventListener('click', () => this._saveToCloud(true));
+
+        if (this.syncIdInput) {
+            this.syncIdInput.addEventListener('change', () => {
+                this.syncId = this.syncIdInput.value.trim();
+                this._saveData();
+                this._updateSyncStatus();
+            });
+        }
+
         if (this.ghTokenInput) {
             this.ghTokenInput.addEventListener('change', () => {
                 this.ghToken = this.ghTokenInput.value.trim();
@@ -159,8 +178,10 @@ class RoutineApp {
             });
             // Visual feedback: Fade out when not focused and has a value
             this.ghTokenInput.addEventListener('focus', () => {
-                this.ghTokenWrapper.style.opacity = "1";
-                this.ghTokenInput.style.color = "white";
+                if (this.ghTokenWrapper) {
+                    this.ghTokenWrapper.style.opacity = "1";
+                    this.ghTokenInput.style.color = "white";
+                }
             });
             this.ghTokenInput.addEventListener('blur', () => {
                 this._updateTokenVisibility();
