@@ -783,7 +783,14 @@ class RoutineApp {
             'Accept': 'application/vnd.github.v3+json',
             'Content-Type': 'application/json'
         };
-        const resp = await fetch(url, { ...options, headers });
+
+        // Cache busting for GET requests to ensure we always get current data from GitHub
+        let finalUrl = url;
+        if ((!options.method || options.method === 'GET') && !url.includes('?')) {
+            finalUrl += `?t=${Date.now()}`;
+        }
+
+        const resp = await fetch(finalUrl, { ...options, headers });
         if (resp.status === 401) throw new Error("GitHubトークンが無効、または有効期限切れです");
         if (!resp.ok) {
             const errData = await resp.json().catch(() => ({}));
@@ -828,11 +835,16 @@ class RoutineApp {
             if (!targetGistId) {
                 const gistsResp = await this._githubFetch("https://api.github.com/gists");
                 const gists = await gistsResp.json();
-                // Robust filename matching (handles potential normalization issues)
-                const existing = gists.find(g =>
+
+                // Find all gists matching the filename and sort by updated_at descending
+                const matches = gists.filter(g =>
                     Object.keys(g.files).some(key => key.normalize() === filename.normalize())
                 );
-                if (existing) targetGistId = existing.id;
+
+                if (matches.length > 0) {
+                    matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+                    targetGistId = matches[0].id;
+                }
             }
 
             let resp;
@@ -841,7 +853,7 @@ class RoutineApp {
                 resp = await this._githubFetch(`https://api.github.com/gists/${targetGistId}`, {
                     method: 'PATCH',
                     body: JSON.stringify({
-                        description: `RoutineShifter Sync: ${id}`,
+                        description: `RoutineShifter Sync: ${id} (Updated: ${new Date().toLocaleString()})`,
                         files: { [filename]: { content: dataStr } }
                     })
                 });
@@ -850,7 +862,7 @@ class RoutineApp {
                 resp = await this._githubFetch("https://api.github.com/gists", {
                     method: 'POST',
                     body: JSON.stringify({
-                        description: `RoutineShifter Sync: ${id}`,
+                        description: `RoutineShifter Sync: ${id} (Created: ${new Date().toLocaleString()})`,
                         public: false,
                         files: { [filename]: { content: dataStr } }
                     })
@@ -885,9 +897,17 @@ class RoutineApp {
             // Search for Gist
             const gistsResp = await this._githubFetch("https://api.github.com/gists");
             const gists = await gistsResp.json();
-            const target = gists.find(g =>
+
+            // Prioritize the most recently updated Gist for this ID
+            const matches = gists.filter(g =>
                 Object.keys(g.files).some(key => key.normalize() === filename.normalize())
             );
+
+            let target = null;
+            if (matches.length > 0) {
+                matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+                target = matches[0];
+            }
 
             if (target) {
                 // Get content
