@@ -15,11 +15,9 @@ class RoutineApp {
         this.lastChimeMinute = -1;
         this.syncId = "";
 
-        // Firebase Configuration (Public light endpoint for sync demo)
-        // Note: For a private production app, this should be your own keys.
-        this.firebaseConfig = {
-            databaseURL: "https://routineshifter-sync-default-rtdb.firebaseio.com/"
-        };
+        // KVDB Configuration (Simple public bucket for sync)
+        this.kvdbBucket = "B1yH1N2R1zB9mS9E9H9V9"; // Randomly generated bucket key
+        this.syncEndpoint = `https://kvdb.io/${this.kvdbBucket}/`;
 
         // --- Japanese Word Lists for IDs ---
         this.idWords = {
@@ -733,11 +731,11 @@ class RoutineApp {
 
         const data = localStorage.getItem('routineData');
         const encodedId = encodeURIComponent(id);
-        const url = `${this.firebaseConfig.databaseURL}sync/${encodedId}.json`;
+        const url = `${this.syncEndpoint}${encodedId}`;
 
         try {
             const resp = await fetch(url, {
-                method: 'PUT',
+                method: 'POST', // KVDB uses POST/PUT to set keys
                 body: data
             });
             if (resp.ok && manual) alert(`データをクラウドに保存しました！\nID: ${id}`);
@@ -753,7 +751,7 @@ class RoutineApp {
 
         const id = this._sanitizeId(idRaw);
         const encodedId = encodeURIComponent(id);
-        const url = `${this.firebaseConfig.databaseURL}sync/${encodedId}.json`;
+        const url = `${this.syncEndpoint}${encodedId}`;
 
         try {
             const resp = await fetch(url);
