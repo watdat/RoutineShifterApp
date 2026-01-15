@@ -712,7 +712,7 @@ class RoutineApp {
     _generateSyncId() {
         const w1 = this.idWords.adj[Math.floor(Math.random() * this.idWords.adj.length)];
         const w2 = this.idWords.noun[Math.floor(Math.random() * this.idWords.noun.length)];
-        const id = `${w1}-${w2}`;
+        const id = `${w1}${w2}`;
 
         this.syncId = id;
         if (this.syncIdInput) this.syncIdInput.value = id;
