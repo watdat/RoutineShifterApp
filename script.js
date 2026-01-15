@@ -174,10 +174,14 @@ class RoutineApp {
             baseWakeupTime: this.baseWakeupTimeInput ? this.baseWakeupTimeInput.value : "05:00",
             chimeType: this.chimeSelect ? this.chimeSelect.value : "none",
             wakeChecks: this.wakeCheckboxes.map(cb => cb ? cb.checked : false),
-            syncId: this.syncId,
-            ghToken: this.ghToken
+            syncId: this.syncId
         };
         localStorage.setItem('routineData', JSON.stringify(data));
+
+        // Save token separately so it doesn't get pushed to Gist (prevents auto-revocation)
+        if (this.ghToken) {
+            localStorage.setItem('rs_gh_token', this.ghToken);
+        }
 
         // Auto-save to cloud if sync is active
         if (this.syncId) {
