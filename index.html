@@ -59,13 +59,16 @@
                                 style="width:auto; padding:2px 8px; font-size:1.0rem; border:1px solid #ffffff; border-radius:15px; background:rgba(0,0,0,0.3); color:var(--secondary-color); font-family:inherit; cursor:pointer; outline:none;">
                         </label>
                         <label class="checkbox-item">
-                            <input type="checkbox" id="checkWake0"> Wake+0h (<span class="dynamic-time" data-offset="0">05:00</span>)
+                            <input type="checkbox" id="checkWake0"> Wake+0h (<span class="dynamic-time"
+                                data-offset="0">05:00</span>)
                         </label>
                         <label class="checkbox-item">
-                            <input type="checkbox" id="checkWake8"> Wake+8h (<span class="dynamic-time" data-offset="8">13:00</span>)
+                            <input type="checkbox" id="checkWake8"> Wake+8h (<span class="dynamic-time"
+                                data-offset="8">13:00</span>)
                         </label>
                         <label class="checkbox-item">
-                            <input type="checkbox" id="checkWake16"> Wake+16h (<span class="dynamic-time" data-offset="16">21:00</span>)
+                            <input type="checkbox" id="checkWake16"> Wake+16h (<span class="dynamic-time"
+                                data-offset="16">21:00</span>)
                         </label>
                     </div>
                 </header>
@@ -99,6 +102,29 @@
                     <h2>シフト後の今の活動</h2>
                     <!-- Removed time from here, will be in chart -->
                     <div id="shiftedActivity" class="status-highlight">特に無し (Free Time)</div>
+                </section>
+
+                <section class="sync-section">
+                    <div class="divider"></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h2>クラウド同期</h2>
+                        <span id="syncStatus" class="sync-status inactive" title="同期オフ">●</span>
+                    </div>
+                    <p style="font-size:0.75rem; color:#aaa; margin-bottom:0.8rem;">IDを入力してデータを共有できます</p>
+                    <div class="sync-controls">
+                        <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+                            <input type="text" id="syncIdInput" placeholder="同期ID (例: RS-1234)"
+                                style="font-size:0.9rem; padding:0.5rem;">
+                            <button id="loadSyncBtn" class="btn-primary"
+                                style="padding:0.5rem 1rem; font-size:0.85rem;">読込</button>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; gap:0.5rem;">
+                            <button id="genSyncIdBtn" class="btn-secondary"
+                                style="flex:1; font-size:0.8rem; padding:0.5rem;">新規ID生成</button>
+                            <button id="pushSyncBtn" class="btn-secondary"
+                                style="flex:1; font-size:0.8rem; padding:0.5rem;">手動保存</button>
+                        </div>
+                    </div>
                 </section>
 
                 <section class="list-section">

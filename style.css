@@ -432,6 +432,34 @@ button:active {
     font-size: 1.2rem;
 }
 
+/* --- クラウド同期UI --- */
+.sync-section {
+    margin-top: 0.5rem;
+}
+
+.sync-status {
+    font-size: 1rem;
+    margin-right: 5px;
+    transition: color 0.3s ease;
+}
+
+.sync-status.active {
+    color: var(--secondary-color);
+    text-shadow: 0 0 8px var(--secondary-color);
+}
+
+.sync-status.inactive {
+    color: #555;
+}
+
+.sync-controls input {
+    margin: 0;
+}
+
+.sync-controls button {
+    white-space: nowrap;
+}
+
 /* --- レスポンシブ対応 (スマホ向けレイアウト) --- */
 @media (max-width: 900px) {
     .app-layout {

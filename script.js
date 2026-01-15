@@ -13,6 +13,19 @@ class RoutineApp {
         this.chart = null;
         this.audioCtx = null;
         this.lastChimeMinute = -1;
+        this.syncId = "";
+
+        // Firebase Configuration (Public light endpoint for sync demo)
+        // Note: For a private production app, this should be your own keys.
+        this.firebaseConfig = {
+            databaseURL: "https://routineshifter-sync-default-rtdb.firebaseio.com/"
+        };
+
+        // --- Japanese Word Lists for IDs ---
+        this.idWords = {
+            adj: ['あおい', 'あかい', 'しろい', 'まるい', 'はやい', 'ひかる', 'ゆるい', 'ふしぎ', 'きいろ', 'みどり'],
+            noun: ['ねこ', 'いぬ', 'うさぎ', 'ごはん', 'おもち', 'みかん', 'おすし', 'ゆき', 'ほし', 'つき']
+        };
 
         // --- Configuration ---
         this.colors = [
@@ -87,6 +100,13 @@ class RoutineApp {
             document.getElementById('checkWake8'),
             document.getElementById('checkWake16')
         ];
+
+        // Sync Elements
+        this.syncIdInput = document.getElementById('syncIdInput');
+        this.genSyncIdBtn = document.getElementById('genSyncIdBtn');
+        this.loadSyncBtn = document.getElementById('loadSyncBtn');
+        this.pushSyncBtn = document.getElementById('pushSyncBtn');
+        this.syncStatus = document.getElementById('syncStatus');
     }
 
     _addEventListeners() {
@@ -129,6 +149,11 @@ class RoutineApp {
                 cb.addEventListener('change', () => this._saveData());
             }
         });
+
+        // Sync Controls
+        if (this.genSyncIdBtn) this.genSyncIdBtn.addEventListener('click', () => this._generateSyncId());
+        if (this.loadSyncBtn) this.loadSyncBtn.addEventListener('click', () => this._loadFromCloud());
+        if (this.pushSyncBtn) this.pushSyncBtn.addEventListener('click', () => this._saveToCloud(true));
     }
 
     // ==========================================
@@ -145,9 +170,15 @@ class RoutineApp {
             memo: this.memoInput ? this.memoInput.value : "",
             baseWakeupTime: this.baseWakeupTimeInput ? this.baseWakeupTimeInput.value : "05:00",
             chimeType: this.chimeSelect ? this.chimeSelect.value : "none",
-            wakeChecks: this.wakeCheckboxes.map(cb => cb ? cb.checked : false)
+            wakeChecks: this.wakeCheckboxes.map(cb => cb ? cb.checked : false),
+            syncId: this.syncId
         };
         localStorage.setItem('routineData', JSON.stringify(data));
+
+        // Auto-save to cloud if sync is active
+        if (this.syncId) {
+            this._saveToCloud();
+        }
     }
 
     /**
@@ -171,6 +202,10 @@ class RoutineApp {
             if (this.chimeSelect && data.chimeType) {
                 this.chimeSelect.value = data.chimeType;
             }
+
+            this.syncId = data.syncId || "";
+            if (this.syncIdInput) this.syncIdInput.value = this.syncId;
+            this._updateSyncStatus();
 
             if (data.wakeChecks) {
                 this.wakeCheckboxes.forEach((cb, i) => {
@@ -653,7 +688,96 @@ class RoutineApp {
     }
 
     // ==========================================
-    // 6. UTILITIES
+    // 6. CLOUD SYNC LOGIC (REST API)
+    // ==========================================
+
+    _updateSyncStatus() {
+        if (!this.syncStatus) return;
+        if (this.syncId) {
+            this.syncStatus.className = 'sync-status active';
+            this.syncStatus.textContent = '●'; // Safe char
+            this.syncStatus.title = '同期中: ' + this.syncId;
+        } else {
+            this.syncStatus.className = 'sync-status inactive';
+            this.syncStatus.textContent = '●';
+            this.syncStatus.title = '同期オフ';
+        }
+    }
+
+    _sanitizeId(str) {
+        // Remove dangerous characters and limit length
+        return str.replace(/[<>"';%&]/g, '').trim().slice(0, 50);
+    }
+
+    _generateSyncId() {
+        const w1 = this.idWords.adj[Math.floor(Math.random() * this.idWords.adj.length)];
+        const w2 = this.idWords.noun[Math.floor(Math.random() * this.idWords.noun.length)];
+        const id = `${w1}-${w2}`;
+
+        this.syncId = id;
+        if (this.syncIdInput) this.syncIdInput.value = id;
+        this._updateSyncStatus();
+        // Removed auto-save here to avoid clutter; user must click 'Save' or start editing
+        this._saveData();
+    }
+
+    async _saveToCloud(manual = false) {
+        let idRaw = this.syncIdInput.value.trim();
+        if (!idRaw && manual) return alert("同期IDを入力してください");
+
+        const id = this._sanitizeId(idRaw);
+        if (!id) return;
+
+        this.syncId = id;
+        this._updateSyncStatus();
+
+        const data = localStorage.getItem('routineData');
+        const encodedId = encodeURIComponent(id);
+        const url = `${this.firebaseConfig.databaseURL}sync/${encodedId}.json`;
+
+        try {
+            const resp = await fetch(url, {
+                method: 'PUT',
+                body: data
+            });
+            if (resp.ok && manual) alert(`データをクラウドに保存しました！\nID: ${id}`);
+        } catch (e) {
+            console.error("Cloud save failed", e);
+            if (manual) alert("保存に失敗しました。通信環境を確認してください。");
+        }
+    }
+
+    async _loadFromCloud() {
+        const idRaw = this.syncIdInput.value.trim();
+        if (!idRaw) return alert("同期IDを入力してください");
+
+        const id = this._sanitizeId(idRaw);
+        const encodedId = encodeURIComponent(id);
+        const url = `${this.firebaseConfig.databaseURL}sync/${encodedId}.json`;
+
+        try {
+            const resp = await fetch(url);
+            const data = await resp.json();
+
+            if (data) {
+                if (confirm(`クラウドからデータを読み込みますか？\nID: ${id}\n現在の設定は上書きされます。`)) {
+                    this.syncId = id;
+                    localStorage.setItem('routineData', JSON.stringify(data));
+                    this._loadData();
+                    this._renderAll();
+                    alert("読み込みが完了しました！");
+                }
+            } else {
+                alert(`ID 「${id}」 のデータは見つかりませんでした。`);
+            }
+        } catch (e) {
+            console.error("Cloud load failed", e);
+            alert("通信エラーが発生しました。");
+        }
+    }
+
+    // ==========================================
+    // 7. UTILITIES
     // ==========================================
 
     _timeToDecimal(str) {
