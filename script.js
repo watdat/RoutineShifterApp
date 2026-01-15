@@ -15,8 +15,8 @@ class RoutineApp {
         this.lastChimeMinute = -1;
         this.syncId = "";
 
-        // Sync Configuration (Using a reliable persistent storage service)
-        this.syncEndpoint = "https://api.vkv.io/v1/rs-sync-bucket-2026/";
+        // Sync Configuration (Using kvdb.io with a public bucket)
+        this.syncEndpoint = "https://kvdb.io/RoutineShifter_Sync_2026/";
 
         // --- Japanese Word Lists for IDs ---
         this.idWords = {
@@ -735,13 +735,17 @@ class RoutineApp {
         try {
             const resp = await fetch(url, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: data
             });
-            if (resp.ok && manual) alert(`データをクラウドに保存しました！\nID: ${id}`);
+            if (resp.ok) {
+                if (manual) alert(`クラウドへの保存が成功しました！\nID: ${id}`);
+            } else {
+                console.error("Cloud save failed with status:", resp.status);
+                if (manual) alert(`保存に失敗しました (Status: ${resp.status})。\n設定や通信を確認してください。`);
+            }
         } catch (e) {
-            console.error("Cloud save failed", e);
-            if (manual) alert("保存に失敗しました。通信環境を確認してください。");
+            console.error("Cloud save network error", e);
+            if (manual) alert("通信エラーが発生しました。ネットワーク接続やCORS設定を確認してください。");
         }
     }
 
@@ -755,21 +759,30 @@ class RoutineApp {
 
         try {
             const resp = await fetch(url);
+            if (!resp.ok) {
+                if (resp.status === 404) {
+                    alert(`ID 「${id}」 のデータは見つかりませんでした。先に保存を行ってください。`);
+                } else {
+                    alert(`読み込みに失敗しました (Status: ${resp.status})。`);
+                }
+                return;
+            }
+
             const data = await resp.json();
 
             if (data) {
-                if (confirm(`クラウドからデータを読み込みますか？\nID: ${id}\n現在の設定は上書きされます。`)) {
+                if (confirm(`クラウドからデータを読み込みますか？\nID: ${id}\n現在の内容は上書きされます。`)) {
                     this.syncId = id;
                     localStorage.setItem('routineData', JSON.stringify(data));
                     this._loadData();
                     this._renderAll();
-                    alert("読み込みが完了しました！");
+                    alert("データの読み込みが完了しました！");
                 }
             } else {
-                alert(`ID 「${id}」 のデータは見つかりませんでした。`);
+                alert(`ID 「${id}」 のデータが空です。`);
             }
         } catch (e) {
-            console.error("Cloud load failed", e);
+            console.error("Cloud load network error", e);
             alert("通信エラーが発生しました。");
         }
     }
