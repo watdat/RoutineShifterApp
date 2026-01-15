@@ -93,13 +93,8 @@ p {
 .sidebar {
     display: flex;
     flex-direction: column;
-    /* Sticky Sidebar configuration */
-    position: sticky;
-    top: 1.5rem;
-    height: calc(100vh - 3rem);
+    /* Removed sticky and fixed height to allow natural scrolling on PC */
     gap: 1.5rem;
-    /* Gap between Upper and Lower panels */
-    /* Remove scrollbar hiding from container, scrollability handled inside panels if needed */
 }
 
 /* Sidebar split panels */
@@ -177,14 +172,9 @@ p {
 }
 
 .sidebar-lower {
-    flex: 1;
-    /* Comparison fills remaining height */
     display: flex;
     flex-direction: column;
-    min-height: 0;
-    /* Enable scrolling inside */
-    overflow: hidden;
-    /* Prevent spill */
+    /* Let the panel grow naturally on PC */
 }
 
 .status-highlight {
@@ -199,22 +189,15 @@ p {
 }
 
 .list-section {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 0;
     margin-top: 1.5rem;
-    overflow: hidden;
-    /* For inner scroll */
 }
 
 .list-scroll-container {
-    flex: 1;
-    overflow-y: auto;
     border-top: 1px solid var(--panel-border);
     padding-top: 0.5rem;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    /* Removed overflow-y: auto to let it flow with the page scroll */
 }
 
 #shiftedScheduleList {

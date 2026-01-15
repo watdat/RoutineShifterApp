@@ -80,6 +80,13 @@ class RoutineApp {
         // Chime Controls
         this.chimeSelect = document.getElementById('chimeSelect');
         this.testChimeBtn = document.getElementById('testChimeBtn');
+
+        // Wake Checkboxes
+        this.wakeCheckboxes = [
+            document.getElementById('checkWake0'),
+            document.getElementById('checkWake8'),
+            document.getElementById('checkWake16')
+        ];
     }
 
     _addEventListeners() {
@@ -115,6 +122,13 @@ class RoutineApp {
                 this._saveData();
             });
         }
+
+        // Wake Checkbox persistence
+        this.wakeCheckboxes.forEach(cb => {
+            if (cb) {
+                cb.addEventListener('change', () => this._saveData());
+            }
+        });
     }
 
     // ==========================================
@@ -130,7 +144,8 @@ class RoutineApp {
             shiftHours: this.shiftHours,
             memo: this.memoInput ? this.memoInput.value : "",
             baseWakeupTime: this.baseWakeupTimeInput ? this.baseWakeupTimeInput.value : "05:00",
-            chimeType: this.chimeSelect ? this.chimeSelect.value : "none"
+            chimeType: this.chimeSelect ? this.chimeSelect.value : "none",
+            wakeChecks: this.wakeCheckboxes.map(cb => cb ? cb.checked : false)
         };
         localStorage.setItem('routineData', JSON.stringify(data));
     }
@@ -155,6 +170,14 @@ class RoutineApp {
             }
             if (this.chimeSelect && data.chimeType) {
                 this.chimeSelect.value = data.chimeType;
+            }
+
+            if (data.wakeChecks) {
+                this.wakeCheckboxes.forEach((cb, i) => {
+                    if (cb && data.wakeChecks[i] !== undefined) {
+                        cb.checked = data.wakeChecks[i];
+                    }
+                });
             }
 
             // Sync UI inputs with loaded state
@@ -473,7 +496,8 @@ class RoutineApp {
 
         this.dynamicTimeSpans.forEach(span => {
             const offset = parseFloat(span.getAttribute('data-offset'));
-            const targetDec = this._normalizeHour(baseDec + offset + this.shiftHours);
+            // MODIFIED: Removed shiftHours to decouple from shift logic
+            const targetDec = this._normalizeHour(baseDec + offset);
             span.textContent = this._decimalToHHMM(targetDec);
         });
     }
