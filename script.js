@@ -101,6 +101,7 @@ class RoutineApp {
         this.genSyncIdBtn = document.getElementById('genSyncIdBtn');
         this.loadSyncBtn = document.getElementById('loadSyncBtn');
         this.pushSyncBtn = document.getElementById('pushSyncBtn');
+        this.ghTokenInput = document.getElementById('ghTokenInput');
         this.syncStatus = document.getElementById('syncStatus');
     }
 
@@ -149,6 +150,13 @@ class RoutineApp {
         if (this.genSyncIdBtn) this.genSyncIdBtn.addEventListener('click', () => this._generateSyncId());
         if (this.loadSyncBtn) this.loadSyncBtn.addEventListener('click', () => this._loadFromCloud());
         if (this.pushSyncBtn) this.pushSyncBtn.addEventListener('click', () => this._saveToCloud(true));
+        if (this.ghTokenInput) {
+            this.ghTokenInput.addEventListener('change', () => {
+                this.ghToken = this.ghTokenInput.value.trim();
+                this._saveData();
+                this._updateSyncStatus();
+            });
+        }
     }
 
     // ==========================================
