@@ -15,9 +15,8 @@ class RoutineApp {
         this.lastChimeMinute = -1;
         this.syncId = "";
 
-        // KVDB Configuration (Simple public bucket for sync)
-        this.kvdbBucket = "B1yH1N2R1zB9mS9E9H9V9"; // Randomly generated bucket key
-        this.syncEndpoint = `https://kvdb.io/${this.kvdbBucket}/`;
+        // Sync Configuration (Using a reliable persistent storage service)
+        this.syncEndpoint = "https://api.vkv.io/v1/rs-sync-bucket-2026/";
 
         // --- Japanese Word Lists for IDs ---
         this.idWords = {
@@ -735,7 +734,8 @@ class RoutineApp {
 
         try {
             const resp = await fetch(url, {
-                method: 'POST', // KVDB uses POST/PUT to set keys
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
                 body: data
             });
             if (resp.ok && manual) alert(`データをクラウドに保存しました！\nID: ${id}`);
