@@ -739,7 +739,11 @@ class RoutineApp {
             'Content-Type': 'application/json'
         };
         const resp = await fetch(url, { ...options, headers });
-        if (resp.status === 401) throw new Error("GitHubトークンが無効です");
+        if (resp.status === 401) throw new Error("GitHubトークンが無効、または有効期限切れです");
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(`Status: ${resp.status} - ${errData.message || '不明なエラー'}`);
+        }
         return resp;
     }
 
@@ -774,11 +778,15 @@ class RoutineApp {
 
         try {
             // 1. Search for existing Gist for this ID
-            let targetGistId = this.gistId;
+            let targetGistId = this.gistId || localStorage.getItem(`rs_gist_id_${id}`);
+
             if (!targetGistId) {
                 const gistsResp = await this._githubFetch("https://api.github.com/gists");
                 const gists = await gistsResp.json();
-                const existing = gists.find(g => g.files[filename]);
+                // Robust filename matching (handles potential normalization issues)
+                const existing = gists.find(g =>
+                    Object.keys(g.files).some(key => key.normalize() === filename.normalize())
+                );
                 if (existing) targetGistId = existing.id;
             }
 
@@ -798,22 +806,22 @@ class RoutineApp {
                     method: 'POST',
                     body: JSON.stringify({
                         description: `RoutineShifter Sync: ${id}`,
-                        public: false, // Private secret gist
+                        public: false,
                         files: { [filename]: { content: dataStr } }
                     })
                 });
                 const newGist = await resp.json();
-                this.gistId = newGist.id;
+                targetGistId = newGist.id;
             }
 
-            if (resp.ok) {
+            if (resp && resp.ok) {
+                this.gistId = targetGistId;
+                localStorage.setItem(`rs_gist_id_${id}`, targetGistId); // Persist ID
                 if (manual) alert(`GitHub Gist への保存に成功しました！\nID: ${id}`);
-            } else {
-                throw new Error(`Status: ${resp.status}`);
             }
         } catch (e) {
             console.error("GitHub sync save failed", e);
-            if (manual) alert(`保存に失敗しました: ${e.message}`);
+            if (manual) alert(`保存に失敗しました:\n${e.message}\nもし「Secondary Rate Limit」と出た場合は、数分待ってからお試しください。`);
         }
     }
 
@@ -832,18 +840,23 @@ class RoutineApp {
             // Search for Gist
             const gistsResp = await this._githubFetch("https://api.github.com/gists");
             const gists = await gistsResp.json();
-            const target = gists.find(g => g.files[filename]);
+            const target = gists.find(g =>
+                Object.keys(g.files).some(key => key.normalize() === filename.normalize())
+            );
 
             if (target) {
                 // Get content
                 const detailsResp = await this._githubFetch(target.url);
                 const details = await detailsResp.json();
-                const contentStr = details.files[filename].content;
+                // Find correct key even if normalized
+                const actualKey = Object.keys(details.files).find(key => key.normalize() === filename.normalize());
+                const contentStr = details.files[actualKey].content;
                 const data = JSON.parse(contentStr);
 
                 if (confirm(`GitHubからデータを読み込みますか？\nID: ${id}\n現在の内容は上書きされます。`)) {
                     this.syncId = id;
                     this.gistId = target.id;
+                    localStorage.setItem(`rs_gist_id_${id}`, target.id); // Remember ID
                     localStorage.setItem('routineData', JSON.stringify(data));
                     this._loadData();
                     this._renderAll();
@@ -855,7 +868,7 @@ class RoutineApp {
             }
         } catch (e) {
             console.error("GitHub sync load failed", e);
-            alert(`読み込みに失敗しました: ${e.message}`);
+            alert(`読み込みに失敗しました:\n${e.message}`);
         }
     }
 
