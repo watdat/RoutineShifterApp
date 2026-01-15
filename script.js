@@ -183,9 +183,10 @@ class RoutineApp {
             localStorage.setItem('rs_gh_token', this.ghToken);
         }
 
-        // Auto-save to cloud if sync is active
-        if (this.syncId) {
-            this._saveToCloud();
+        // Auto-save to cloud if sync is active (with debounce to avoid rate limits)
+        if (this.syncId && this.ghToken) {
+            if (this.syncTimer) clearTimeout(this.syncTimer);
+            this.syncTimer = setTimeout(() => this._saveToCloud(false), 5000); // 5 sec delay
         }
     }
 
