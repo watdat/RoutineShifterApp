@@ -12,11 +12,9 @@ class RoutineApp {
         this.shiftHours = 0;
         this.chart = null;
         this.audioCtx = null;
-        this.lastChimeMinute = -1;
         this.syncId = "";
-
-        // Sync Configuration (Using kvdb.io with a public bucket)
-        this.syncEndpoint = "https://kvdb.io/RoutineShifter_Sync_2026/";
+        this.ghToken = ""; // GitHub Personal Access Token
+        this.gistId = "";  // Cached Gist ID for this session
 
         // --- Japanese Word Lists for IDs ---
         this.idWords = {
@@ -168,7 +166,8 @@ class RoutineApp {
             baseWakeupTime: this.baseWakeupTimeInput ? this.baseWakeupTimeInput.value : "05:00",
             chimeType: this.chimeSelect ? this.chimeSelect.value : "none",
             wakeChecks: this.wakeCheckboxes.map(cb => cb ? cb.checked : false),
-            syncId: this.syncId
+            syncId: this.syncId,
+            ghToken: this.ghToken
         };
         localStorage.setItem('routineData', JSON.stringify(data));
 
@@ -690,20 +689,19 @@ class RoutineApp {
 
     _updateSyncStatus() {
         if (!this.syncStatus) return;
-        if (this.syncId) {
+        if (this.syncId && this.ghToken) {
             this.syncStatus.className = 'sync-status active';
-            this.syncStatus.textContent = '●'; // Safe char
-            this.syncStatus.title = '同期中: ' + this.syncId;
+            this.syncStatus.textContent = '●';
+            this.syncStatus.title = `同期中 (Gist): ${this.syncId}`;
         } else {
             this.syncStatus.className = 'sync-status inactive';
             this.syncStatus.textContent = '●';
-            this.syncStatus.title = '同期オフ';
+            this.syncStatus.title = '同期オフ (トークンまたはIDが未設定)';
         }
     }
 
     _sanitizeId(str) {
-        // Remove dangerous characters and limit length
-        return str.replace(/[<>"';%&]/g, '').trim().slice(0, 50);
+        return str.replace(/[<>"';%&/]/g, '').trim().slice(0, 50);
     }
 
     _generateSyncId() {
@@ -714,76 +712,125 @@ class RoutineApp {
         this.syncId = id;
         if (this.syncIdInput) this.syncIdInput.value = id;
         this._updateSyncStatus();
-        // Removed auto-save here to avoid clutter; user must click 'Save' or start editing
         this._saveData();
     }
 
+    /**
+     * GitHub API Helper
+     */
+    async _githubFetch(url, options = {}) {
+        const headers = {
+            'Authorization': `token ${this.ghToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+        };
+        const resp = await fetch(url, { ...options, headers });
+        if (resp.status === 401) throw new Error("GitHubトークンが無効です");
+        return resp;
+    }
+
     async _saveToCloud(manual = false) {
-        let idRaw = this.syncIdInput.value.trim();
-        if (!idRaw && manual) return alert("同期IDを入力してください");
+        const idRaw = this.syncIdInput.value.trim();
+        const token = this.ghTokenInput.value.trim();
+
+        if (manual) {
+            if (!token) return alert("GitHubトークンを入力してください");
+            if (!idRaw) return alert("同期IDを入力してください");
+        }
+        if (!token || !idRaw) return;
 
         const id = this._sanitizeId(idRaw);
-        if (!id) return;
-
         this.syncId = id;
+        this.ghToken = token;
         this._updateSyncStatus();
 
-        const data = localStorage.getItem('routineData');
-        const encodedId = encodeURIComponent(id);
-        const url = `${this.syncEndpoint}${encodedId}`;
+        const dataStr = localStorage.getItem('routineData');
+        const filename = `rs-sync-${id}.json`;
 
         try {
-            const resp = await fetch(url, {
-                method: 'PUT',
-                body: data
-            });
-            if (resp.ok) {
-                if (manual) alert(`クラウドへの保存が成功しました！\nID: ${id}`);
+            // 1. Search for existing Gist for this ID
+            let targetGistId = this.gistId;
+            if (!targetGistId) {
+                const gistsResp = await this._githubFetch("https://api.github.com/gists");
+                const gists = await gistsResp.json();
+                const existing = gists.find(g => g.files[filename]);
+                if (existing) targetGistId = existing.id;
+            }
+
+            let resp;
+            if (targetGistId) {
+                // Update existing
+                resp = await this._githubFetch(`https://api.github.com/gists/${targetGistId}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        description: `RoutineShifter Sync: ${id}`,
+                        files: { [filename]: { content: dataStr } }
+                    })
+                });
             } else {
-                console.error("Cloud save failed with status:", resp.status);
-                if (manual) alert(`保存に失敗しました (Status: ${resp.status})。\n設定や通信を確認してください。`);
+                // Create new
+                resp = await this._githubFetch("https://api.github.com/gists", {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        description: `RoutineShifter Sync: ${id}`,
+                        public: false, // Private secret gist
+                        files: { [filename]: { content: dataStr } }
+                    })
+                });
+                const newGist = await resp.json();
+                this.gistId = newGist.id;
+            }
+
+            if (resp.ok) {
+                if (manual) alert(`GitHub Gist への保存に成功しました！\nID: ${id}`);
+            } else {
+                throw new Error(`Status: ${resp.status}`);
             }
         } catch (e) {
-            console.error("Cloud save network error", e);
-            if (manual) alert("通信エラーが発生しました。ネットワーク接続やCORS設定を確認してください。");
+            console.error("GitHub sync save failed", e);
+            if (manual) alert(`保存に失敗しました: ${e.message}`);
         }
     }
 
     async _loadFromCloud() {
         const idRaw = this.syncIdInput.value.trim();
+        const token = this.ghTokenInput.value.trim();
+
+        if (!token) return alert("GitHubトークンを入力してください");
         if (!idRaw) return alert("同期IDを入力してください");
 
         const id = this._sanitizeId(idRaw);
-        const encodedId = encodeURIComponent(id);
-        const url = `${this.syncEndpoint}${encodedId}`;
+        const filename = `rs-sync-${id}.json`;
+        this.ghToken = token;
 
         try {
-            const resp = await fetch(url);
-            if (!resp.ok) {
-                if (resp.status === 404) {
-                    alert(`ID 「${id}」 のデータは見つかりませんでした。先に保存を行ってください。`);
-                } else {
-                    alert(`読み込みに失敗しました (Status: ${resp.status})。`);
-                }
-                return;
-            }
+            // Search for Gist
+            const gistsResp = await this._githubFetch("https://api.github.com/gists");
+            const gists = await gistsResp.json();
+            const target = gists.find(g => g.files[filename]);
 
-            const data = await resp.json();
+            if (target) {
+                // Get content
+                const detailsResp = await this._githubFetch(target.url);
+                const details = await detailsResp.json();
+                const contentStr = details.files[filename].content;
+                const data = JSON.parse(contentStr);
 
-            if (data) {
-                if (confirm(`クラウドからデータを読み込みますか？\nID: ${id}\n現在の内容は上書きされます。`)) {
+                if (confirm(`GitHubからデータを読み込みますか？\nID: ${id}\n現在の内容は上書きされます。`)) {
                     this.syncId = id;
+                    this.gistId = target.id;
                     localStorage.setItem('routineData', JSON.stringify(data));
                     this._loadData();
                     this._renderAll();
+                    this._updateSyncStatus();
                     alert("データの読み込みが完了しました！");
                 }
             } else {
-                alert(`ID 「${id}」 のデータが空です。`);
+                alert(`ID 「${id}」 のデータはGitHub上に見つかりませんでした。`);
             }
         } catch (e) {
-            console.error("Cloud load network error", e);
-            alert("通信エラーが発生しました。");
+            console.error("GitHub sync load failed", e);
+            alert(`読み込みに失敗しました: ${e.message}`);
         }
     }
 

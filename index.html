@@ -121,16 +121,24 @@
 
             <!-- Bottom: Inputs (Stacked) -->
             <div class="input-area">
-                <!-- Cloud Sync (Relocated) -->
+                <!-- Cloud Sync (GitHub Gist Version) -->
                 <section class="sync-section glass-panel">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h2>クラウド同期</h2>
+                        <h2>クラウド同期 (GitHub)</h2>
                         <span id="syncStatus" class="sync-status inactive" title="同期オフ">●</span>
                     </div>
-                    <p style="font-size:0.8rem; color:#aaa; margin-bottom:1rem;">IDを入力して、他のPCやスマホとデータを共有できます</p>
+                    <p style="font-size:0.8rem; color:#aaa; margin-bottom:1rem;">自分専用のGitHub Gistを使って安全に同期します</p>
+                    
                     <div class="sync-controls">
+                        <!-- Token Input (New) -->
+                        <div style="margin-bottom: 12px;">
+                            <label style="font-size:0.75rem; color:#ccc; display:block; margin-bottom:4px;">GitHub Personal Access Token:</label>
+                            <input type="password" id="ghTokenInput" placeholder="ghp_xxxxxxxxxxxx"
+                                style="width:100%; font-size:0.85rem; padding:8px 12px; background:rgba(255,255,255,0.05); color:white; border:1px solid var(--panel-border); border-radius:8px; outline:none;">
+                        </div>
+
                         <div style="display:flex; gap:10px; margin-bottom:10px;">
-                            <input type="text" id="syncIdInput" placeholder="同期ID (例: あおいねこ)"
+                            <input type="text" id="syncIdInput" placeholder="同期ID (例: しろいねこ)"
                                 style="flex:1; font-size:1rem; padding:8px 12px;">
                             <button id="loadSyncBtn" class="btn-primary"
                                 style="padding:8px 20px; font-size:0.9rem;">読込</button>
