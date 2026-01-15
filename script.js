@@ -212,7 +212,9 @@ class RoutineApp {
             }
 
             this.syncId = data.syncId || "";
+            this.ghToken = localStorage.getItem('rs_gh_token') || ""; // Separate key
             if (this.syncIdInput) this.syncIdInput.value = this.syncId;
+            if (this.ghTokenInput) this.ghTokenInput.value = this.ghToken;
             this._updateSyncStatus();
 
             if (data.wakeChecks) {
