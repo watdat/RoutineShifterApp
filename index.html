@@ -13,6 +13,7 @@
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 
 <body>
@@ -78,21 +79,26 @@
 
             <!-- Lower Panel: Shift, Status, List -->
             <section class="glass-panel sidebar-lower">
-                <section class="shift-section" style="position: relative;">
-                    <div style="position: absolute; top: 0; right: 0;">
-                        <a href="manual.html"
-                            style="color: var(--secondary-color); text-decoration: none; font-size: 0.85rem; border-bottom: 1px dotted var(--secondary-color); opacity: 0.8;">
-                            ℹ️ 使い方ガイド
-                        </a>
+                <section class="shift-section">
+                    <div class="shift-header">
+                        <label class="shift-label" style="margin:0;">時間をずらす (時間)</label>
+                        <a href="manual.html" class="usage-guide-link">ℹ️ 使い方ガイド</a>
                     </div>
-                    <div class="shift-control-panel">
-                        <label class="shift-label">時間をずらす (時間)</label>
-                        <input type="range" id="shiftSlider" class="shift-range" value="0" min="-24" max="24"
-                            step="0.5">
-                        <div class="shift-controls-row">
-                            <button id="shiftMinus" class="btn-icon">-</button>
-                            <input type="text" id="shiftHours" value="+00:00" placeholder="±HH:MM">
-                            <button id="shiftPlus" class="btn-icon">+</button>
+
+                    <div class="shift-ui-container">
+                        <!-- Left: Buttons -->
+                        <div class="shift-btn-group">
+                            <button id="shiftMinus" class="btn-shift-tall">-</button>
+                            <button id="shiftPlus" class="btn-shift-tall">+</button>
+                        </div>
+
+                        <!-- Right: Value & Slider -->
+                        <div class="shift-value-group">
+                            <div class="shift-display-box">
+                                <input type="text" id="shiftHours" class="shift-display-input" value="+00:00" readonly>
+                            </div>
+                            <input type="range" id="shiftSlider" class="shift-range" value="0" min="-24" max="24"
+                                step="0.5">
                         </div>
                     </div>
                 </section>
@@ -116,37 +122,40 @@
         <!-- Main Content: Inputs -->
         <main class="main-content">
             <div class="input-area">
-                <!-- Cloud Sync (Refined UI Match Mockup) -->
                 <section class="sync-section glass-panel">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
-                        <h2 style="margin:0;">クラウド同期 (GitHub)</h2>
-                        <!-- Token Input (Compact vertical size, aligned right width) -->
-                        <div id="ghTokenWrapper" style="width: calc(50% - 0.4rem); transition: all 0.3s; opacity: 0.65;">
-                            <input type="password" id="ghTokenInput" placeholder="共有鍵 (初回のみ)"
-                                style="width:100%; font-size:0.7rem; padding:6px 10px; background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.6); border:1px solid var(--panel-border); border-radius:6px; outline:none; box-sizing: border-box;">
+                    <div class="sync-header">
+                        <h2>IDデータ読み書き</h2>
+                        <div class="sync-token-area">
+                            <div id="ghTokenWrapper" class="gh-token-wrapper">
+                                <input type="password" id="ghTokenInput" class="gh-token-input" placeholder="Token">
+                            </div>
+                            <button id="shareSettingsBtn" class="btn-share" title="設定をスマホへ転送">📲</button>
                         </div>
                     </div>
-                    
-                    <div class="sync-controls" style="display:flex; flex-direction:column; gap:0.8rem;">
-                        <!-- Row 1: ID Input & Load -->
-                        <div style="display:flex; gap:0.8rem; align-items: center;">
-                            <div style="flex:1; position:relative; display:flex; align-items:center;">
-                                <span id="syncStatus" class="sync-status inactive"
-                                    style="position:absolute; left:12px; font-size:12px; cursor:default; z-index:10;"
-                                    title="同期オフ">●</span>
-                                <input type="text" id="syncIdInput" placeholder="同期ID (スマホと共有する名前)"
-                                    style="width:100%; font-size:1.0rem; padding:0.8rem 1rem 0.8rem 30px; border-radius: 8px;">
-                            </div>
-                            <button id="loadSyncBtn" class="btn-primary"
-                                style="width:80px; font-size:1.0rem; padding:0.8rem;">読込</button>
+
+                    <div class="sync-control-stack">
+                        <!-- Row 1: ID Input -->
+                        <div class="sync-id-row">
+                            <span id="syncStatus" class="sync-status inactive sync-status-dot" title="同期オフ">●</span>
+                            <input type="text" id="syncIdInput" class="sync-id-input" placeholder="ID (例: ひかるほし)">
                         </div>
 
-                        <!-- Row 2: Helper Buttons -->
-                        <div style="display:flex; gap:0.8rem;">
-                            <button id="genSyncIdBtn" class="btn-secondary"
-                                style="flex:1; font-size:1.0rem; padding:0.8rem;">新規ID作成</button>
-                            <button id="pushSyncBtn" class="btn-secondary"
-                                style="flex:1; font-size:1.0rem; padding:0.8rem;">手動保存</button>
+                        <!-- Row 2: Save - NewID - Load -->
+                        <div class="sync-btn-row">
+                            <!-- Save Block -->
+                            <div id="pushSyncBtn" class="sync-block-btn">
+                                <span class="sync-block-label">保存</span>
+                                <span id="lastSavedDisplay" class="sync-block-time">最終更新: --:--</span>
+                            </div>
+
+                            <!-- New ID Btn -->
+                            <button id="genSyncIdBtn" class="btn-new-id">新ID作成</button>
+
+                            <!-- Load Block -->
+                            <div id="loadSyncBtn" class="sync-block-btn">
+                                <span class="sync-block-label">読込</span>
+                                <span id="lastLoadDisplay" class="sync-block-time">最終更新: --:--</span>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -179,7 +188,30 @@
                 </section>
             </div>
         </main>
+        </main>
     </div>
+
+    <!-- Share Modal -->
+    <div id="shareModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
+        <div class="glass-panel" style="padding:2rem; text-align:center; max-width:90%; position:relative;">
+            <button id="closeShareModal"
+                style="position:absolute; top:10px; right:15px; background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+            <h3 style="margin-top:0; color:var(--secondary-color);">スマホへ設定を転送</h3>
+
+            <div id="qrcode"
+                style="background:white; padding:15px; border-radius:8px; margin:1rem auto; width: fit-content;"></div>
+
+            <p style="font-size:0.9rem; margin-bottom:1rem;">カメラで読み取るか、URLをコピーしてください</p>
+
+            <div style="display:flex; gap:0.5rem; justify-content:center;">
+                <button id="copyLinkBtn" class="btn-secondary" style="font-size:0.9rem;">🔗設定リンクをコピー</button>
+            </div>
+            <div id="copyMsg" style="height:1.2em; color:var(--secondary-color); font-size:0.8rem; margin-top:0.5rem;">
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 

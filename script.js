@@ -101,9 +101,18 @@ class RoutineApp {
         this.genSyncIdBtn = document.getElementById('genSyncIdBtn');
         this.loadSyncBtn = document.getElementById('loadSyncBtn');
         this.pushSyncBtn = document.getElementById('pushSyncBtn');
+        this.lastSavedDisplay = document.getElementById('lastSavedDisplay');
+        this.lastLoadDisplay = document.getElementById('lastLoadDisplay');
         this.ghTokenInput = document.getElementById('ghTokenInput');
         this.ghTokenWrapper = document.getElementById('ghTokenWrapper');
         this.syncStatus = document.getElementById('syncStatus');
+
+        // Share Elements
+        this.shareSettingsBtn = document.getElementById('shareSettingsBtn');
+        this.shareModal = document.getElementById('shareModal');
+        this.closeShareModal = document.getElementById('closeShareModal');
+        this.copyLinkBtn = document.getElementById('copyLinkBtn');
+        this.copyMsg = document.getElementById('copyMsg');
     }
 
     _addEventListeners() {
@@ -186,6 +195,97 @@ class RoutineApp {
             this.ghTokenInput.addEventListener('blur', () => {
                 this._updateTokenVisibility();
             });
+        }
+
+        // --- SHARE SETTINGS (QR/Link) ---
+        if (this.shareSettingsBtn) {
+            this.shareSettingsBtn.addEventListener('click', () => this._openShareModal());
+        }
+        if (this.closeShareModal) {
+            this.closeShareModal.addEventListener('click', () => this.shareModal.style.display = 'none');
+        }
+        if (this.shareModal) {
+            this.shareModal.addEventListener('click', (e) => {
+                if (e.target === this.shareModal) this.shareModal.style.display = 'none';
+            });
+        }
+        if (this.copyLinkBtn) {
+            this.copyLinkBtn.addEventListener('click', () => this._copyShareLink());
+        }
+
+        // --- URL Param Check (Auto Import) ---
+        this._checkUrlParams();
+    }
+
+    // ==========================================
+    // 1-B. SHARE & URL IMPORT
+    // ==========================================
+
+    _openShareModal() {
+        if (!this.syncId || !this.ghToken) {
+            return alert("まずは同期IDとトークンを設定してください。");
+        }
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('id', this.syncId);
+        url.searchParams.set('token', this.ghToken);
+        const shareUrl = url.toString();
+
+        // Show Modal
+        this.shareModal.style.display = 'flex';
+        this.copyMsg.textContent = "";
+
+        // Generate QR
+        const qrContainer = document.getElementById('qrcode');
+        qrContainer.innerHTML = ""; // clear previous
+        new QRCode(qrContainer, {
+            text: shareUrl,
+            width: 180,
+            height: 180
+        });
+
+        this.currentShareUrl = shareUrl;
+    }
+
+    _copyShareLink() {
+        if (!this.currentShareUrl) return;
+        navigator.clipboard.writeText(this.currentShareUrl).then(() => {
+            this.copyMsg.textContent = "リンクをコピーしました！";
+            setTimeout(() => this.copyMsg.textContent = "", 3000);
+        });
+    }
+
+    _checkUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const importId = urlParams.get('id');
+        const importToken = urlParams.get('token');
+
+        if (importId && importToken) {
+            // Clean URL bar immediately to hide token
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({ path: newUrl }, '', newUrl);
+
+            // Step 3: Apply Settings (Automatically, no confirmation)
+            this.syncId = importId;
+            this.ghToken = importToken;
+
+            // Update UI
+            if (this.syncIdInput) this.syncIdInput.value = this.syncId;
+            if (this.ghTokenInput) {
+                this.ghTokenInput.value = this.ghToken;
+                this._updateTokenVisibility();
+            }
+
+            // Save credentials correctly
+            localStorage.setItem('rs_gh_token', this.ghToken);
+            this._saveData();
+
+            // Step 4 Confirmation (Load Data)
+            if (confirm(`Daily Routine Shifter：\n　ID: ${importId} のデータを読み込みますか？  （現在の内容は上書きされます）`)) {
+                this._loadFromCloud(true); // true = suppress internal confirmation
+            } else {
+                alert("設定のみ適用しました。");
+            }
         }
     }
 
@@ -273,6 +373,11 @@ class RoutineApp {
             // Sync UI inputs with loaded state
             this.shiftInput.value = this._decimalToOffsetStr(this.shiftHours);
             if (this.shiftSlider) this.shiftSlider.value = this.shiftHours;
+
+            // Restore Timestamps
+            const ts = JSON.parse(localStorage.getItem('rs_sync_timestamps') || '{}');
+            if (this.lastLoadDisplay) this.lastLoadDisplay.textContent = `最終更新: ${ts.lastPull || '--:--'}`;
+            if (this.lastSavedDisplay) this.lastSavedDisplay.textContent = `最終更新: ${ts.lastPush || '--:--'}`;
 
         } catch (e) {
             console.error("Data load failed. Storage might be corrupted.", e);
@@ -602,20 +707,39 @@ class RoutineApp {
         if (!confirm('既存のデータは上書きされます。よろしいですか？')) return;
 
         const newRoutines = [];
-        const regex = /(.+?)\s+(\d{1,2}:\d{2})\s*[-~]\s*(\d{1,2}:\d{2})/;
+
+        // Regex Patterns:
+        // A. "Name 09:00 - 17:00" (Existing)
+        const regexA = /(.+?)\s+(\d{1,2}:\d{2})\s*[-~]\s*(\d{1,2}:\d{2})/;
+        // B. "09:00 - 17:00: Name" (From Shifted Schedule List copy)
+        const regexB = /(\d{1,2}:\d{2})\s*[-~]\s*(\d{1,2}:\d{2})\s*[:]\s*(.+)/;
 
         text.split('\n').forEach(line => {
-            const match = line.trim().match(regex);
-            if (match) {
-                const name = match[1].trim();
-                let start = match[2].padStart(5, '0');
-                let end = match[3].padStart(5, '0');
+            const str = line.trim();
+            if (!str) return;
 
+            let match = str.match(regexB);
+            if (match) {
+                // Handle Pattern B: Time first
                 newRoutines.push({
                     id: Date.now() + Math.random(),
-                    name, start, end,
+                    name: match[3].trim(),
+                    start: match[1].padStart(5, '0'),
+                    end: match[2].padStart(5, '0'),
                     color: this.colors[newRoutines.length % this.colors.length]
                 });
+            } else {
+                match = str.match(regexA);
+                if (match) {
+                    // Handle Pattern A: Name first
+                    newRoutines.push({
+                        id: Date.now() + Math.random(),
+                        name: match[1].trim(),
+                        start: match[2].padStart(5, '0'),
+                        end: match[3].padStart(5, '0'),
+                        color: this.colors[newRoutines.length % this.colors.length]
+                    });
+                }
             }
         });
 
@@ -681,24 +805,26 @@ class RoutineApp {
             const g = ctx.createGain();
             osc.type = type;
             osc.frequency.setValueAtTime(freq, now + delay);
-            g.gain.setValueAtTime(0, now + delay);
-            g.gain.linearRampToValueAtTime(gainVal, now + delay + 0.02);
+            g.gain.setValueAtTime(gainVal, now + delay);
             g.gain.exponentialRampToValueAtTime(0.001, now + delay + decay);
             osc.connect(g);
             g.connect(ctx.destination);
             osc.start(now + delay);
-            osc.stop(now + delay + decay);
+            osc.stop(now + delay + decay + 0.1);
         };
 
         if (type === 'bell') {
-            [440, 880, 1320].forEach((f, i) => playOsc(f, 'sine', [0.2, 0.1, 0.05][i], 1.5));
+            playOsc(880, 'sine', 0.1, 1.5, 0);
+            playOsc(1760, 'sine', 0.05, 1.0, 0);
         } else if (type === 'ding') {
-            playOsc(1200, 'triangle', 0.2, 0.6);
+            playOsc(1200, 'triangle', 0.1, 0.5, 0);
         } else if (type === 'marimba') {
-            playOsc(660, 'sine', 0.4, 0.3);
+            playOsc(523.25, 'sine', 0.15, 0.3, 0);
+            playOsc(659.25, 'sine', 0.15, 0.3, 0.15);
+            playOsc(783.99, 'sine', 0.15, 0.3, 0.3);
         } else if (type === 'digital') {
-            playOsc(1500, 'square', 0.1, 0.1, 0);
-            playOsc(1500, 'square', 0.1, 0.1, 0.12);
+            playOsc(440, 'square', 0.05, 0.1, 0);
+            playOsc(880, 'square', 0.05, 0.1, 0.1);
         }
     }
 
@@ -707,86 +833,63 @@ class RoutineApp {
         if (type === 'none') return;
 
         const now = new Date();
-        const currentDecimal = now.getHours() + now.getMinutes() / 60;
+        const currentH = now.getHours();
+        const currentM = now.getMinutes();
+        const currentS = now.getSeconds();
 
-        // Initialize lastCheck if first time
-        if (this.lastCheckDecimal === undefined) {
-            this.lastCheckDecimal = currentDecimal;
-            return;
-        }
+        // Exact minute match (00 seconds)
+        if (currentS !== 0) return;
 
-        // If time hasn't changed, skip
-        if (currentDecimal === this.lastCheckDecimal) return;
+        // Check if any shifted routine ends exactly now
+        const currentDecimal = currentH + currentM / 60;
+        const routines = this.routines;
+        let shouldRing = false;
 
-        this.routines.forEach(r => {
+        routines.forEach(r => {
             const endDec = this._timeToDecimal(r.end);
+            // Apply shift to the routine time to see if it matches "REAL world now"
+            // Wait: Shift logic is "Virtual Time = Real Time + Shift".
+            // So if Routine ends at 10:00 (Virtual), and Shift is +1, then Real time is 09:00.
+            // ... Actually, the user wants the alarm when the *shifted* schedule hits the current time?
+            // Usually alarms are based on the displayed time matching current time.
+
+            // Logic: Compare "Current Decimal" with "Shifted End Time"
             const shiftedEnd = this._normalizeHour(endDec + this.shiftHours);
 
-            // "Range/Passage" Logic: Did we cross the shiftedEnd?
-            let crossed = false;
+            // Allow precision error (check if close enough to current minute)
+            const diff = Math.abs(currentDecimal - shiftedEnd);
+            // Handle wrap-around diff (e.g. 23:59 vs 00:00)
+            const diff2 = Math.abs((currentDecimal + 24) - shiftedEnd);
+            const diff3 = Math.abs(currentDecimal - (shiftedEnd + 24));
 
-            if (currentDecimal > this.lastCheckDecimal) {
-                // Normal case: Check if shiftedEnd falls between [last, current]
-                if (shiftedEnd > this.lastCheckDecimal && shiftedEnd <= currentDecimal) crossed = true;
-            } else {
-                // Midnight wrap case: Check [last, 24] or [0, current]
-                if (shiftedEnd > this.lastCheckDecimal || shiftedEnd <= currentDecimal) crossed = true;
-            }
-
-            if (crossed) {
-                console.log(`Chime triggered: ${r.name} at ${this._decimalToHHMM(shiftedEnd)} (Range check)`);
-                this.playChime();
+            // Check if diff is less than 1 minute (1/60)
+            if (diff < 0.001 || diff2 < 0.001 || diff3 < 0.001) {
+                shouldRing = true;
             }
         });
 
-        this.lastCheckDecimal = currentDecimal;
+        if (shouldRing) this.playChime();
     }
 
     // ==========================================
-    // 6. CLOUD SYNC LOGIC (REST API)
+    // 6. GITHUB SYNC (Cloud) - Refactored
     // ==========================================
-
-    _updateSyncStatus() {
-        if (!this.syncStatus) return;
-        if (this.syncId && this.ghToken) {
-            this.syncStatus.className = 'sync-status active';
-            this.syncStatus.textContent = '●';
-            this.syncStatus.title = `同期中 (Gist): ${this.syncId}`;
-        } else {
-            this.syncStatus.className = 'sync-status inactive';
-            this.syncStatus.textContent = '●';
-            this.syncStatus.title = '同期オフ (トークンまたはIDが未設定)';
-        }
-    }
-
-    _sanitizeId(str) {
-        return str.replace(/[<>"';%&/]/g, '').trim().slice(0, 50);
-    }
-
-    _generateSyncId() {
-        const w1 = this.idWords.adj[Math.floor(Math.random() * this.idWords.adj.length)];
-        const w2 = this.idWords.noun[Math.floor(Math.random() * this.idWords.noun.length)];
-        const id = `${w1}${w2}`;
-
-        this.syncId = id;
-        if (this.syncIdInput) this.syncIdInput.value = id;
-        this._updateSyncStatus();
-        this._saveData();
-    }
 
     /**
-     * GitHub API Helper
+     * Helper for GitHub API calls
      */
     async _githubFetch(url, options = {}) {
+        if (!this.ghToken) throw new Error("GitHub Token Missing");
+
         const headers = {
             'Authorization': `token ${this.ghToken}`,
             'Accept': 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json'
+            ...(options.headers || {})
         };
 
-        // Cache busting for GET requests to ensure we always get current data from GitHub
+        // Cache-busting for GET requests to ensure fresh list
         let finalUrl = url;
-        if ((!options.method || options.method === 'GET') && !url.includes('?')) {
+        if (!options.method || options.method === 'GET') {
             finalUrl += `?t=${Date.now()}`;
         }
 
@@ -829,27 +932,24 @@ class RoutineApp {
         const filename = `rs-sync-${id}.json`;
 
         try {
-            // 1. Search for existing Gist for this ID
-            let targetGistId = this.gistId || localStorage.getItem(`rs_gist_id_${id}`);
+            // 1. Fetch current gists and filter by filename (case-insensitive & normalized)
+            const gistsResp = await this._githubFetch("https://api.github.com/gists");
+            const gists = await gistsResp.json();
 
-            if (!targetGistId) {
-                const gistsResp = await this._githubFetch("https://api.github.com/gists");
-                const gists = await gistsResp.json();
+            const matches = gists.filter(g =>
+                Object.keys(g.files).some(key => key.normalize() === filename.normalize())
+            );
 
-                // Find all gists matching the filename and sort by updated_at descending
-                const matches = gists.filter(g =>
-                    Object.keys(g.files).some(key => key.normalize() === filename.normalize())
-                );
-
-                if (matches.length > 0) {
-                    matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-                    targetGistId = matches[0].id;
-                }
+            // Sort matches by updated_at (newest first)
+            if (matches.length > 0) {
+                matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
             }
 
             let resp;
+            let targetGistId = (matches.length > 0) ? matches[0].id : null;
+
             if (targetGistId) {
-                // Update existing
+                // 2. Update the NEWEST existing gist
                 resp = await this._githubFetch(`https://api.github.com/gists/${targetGistId}`, {
                     method: 'PATCH',
                     body: JSON.stringify({
@@ -858,7 +958,7 @@ class RoutineApp {
                     })
                 });
             } else {
-                // Create new
+                // 3. Create new if none exist
                 resp = await this._githubFetch("https://api.github.com/gists", {
                     method: 'POST',
                     body: JSON.stringify({
@@ -871,10 +971,33 @@ class RoutineApp {
                 targetGistId = newGist.id;
             }
 
+            // 4. CLEANUP: Delete ALL OTHER redundant gists with the same sync ID
+            if (matches.length > 1) {
+                const clonesToDelete = matches.slice(1); // All except the one we updated (or newest)
+                for (const gist of clonesToDelete) {
+                    try {
+                        await this._githubFetch(`https://api.github.com/gists/${gist.id}`, { method: 'DELETE' });
+                        console.log(`Deleted redundant Gist: ${gist.id}`);
+                    } catch (e) {
+                        console.warn(`Failed to delete redundant Gist: ${gist.id}`, e);
+                    }
+                }
+            }
+
             if (resp && resp.ok) {
                 this.gistId = targetGistId;
                 localStorage.setItem(`rs_gist_id_${id}`, targetGistId); // Persist ID
-                if (manual) alert(`GitHub Gist への保存に成功しました！\nID: ${id}`);
+
+                // Update Last Saved Display
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                this._saveTimestamp('lastPush', timeStr);
+                if (this.lastSavedDisplay) {
+                    this.lastSavedDisplay.textContent = `最終更新: ${timeStr}`;
+                }
+
+                // Removed alert as per user request
+                // if (manual) alert(`GitHub Gist への保存に成功しました！\nID: ${id}`);
             }
         } catch (e) {
             console.error("GitHub sync save failed", e);
@@ -882,7 +1005,7 @@ class RoutineApp {
         }
     }
 
-    async _loadFromCloud() {
+    async _loadFromCloud(suppressConfirm = false) {
         const idRaw = this.syncIdInput.value.trim();
         const token = this.ghTokenInput.value.trim();
 
@@ -918,16 +1041,25 @@ class RoutineApp {
                 const contentStr = details.files[actualKey].content;
                 const data = JSON.parse(contentStr);
 
-                if (confirm(`GitHubからデータを読み込みますか？\nID: ${id}\n現在の内容は上書きされます。`)) {
-                    this.syncId = id;
-                    this.gistId = target.id;
-                    localStorage.setItem(`rs_gist_id_${id}`, target.id); // Remember ID
-                    localStorage.setItem('routineData', JSON.stringify(data));
-                    this._loadData();
-                    this._renderAll();
-                    this._updateSyncStatus();
-                    alert("データの読み込みが完了しました！");
+                // Confirm before loading (unless suppressed)
+                if (!suppressConfirm) {
+                    if (!confirm(`Daily Routine Shifter：\n　ID: ${id} のデータを読み込みますか？  （現在の内容は上書きされます）`)) return;
                 }
+
+                this.syncId = id;
+                this.gistId = target.id;
+                localStorage.setItem(`rs_gist_id_${id}`, target.id); // Remember ID
+                localStorage.setItem('routineData', JSON.stringify(data));
+                this._loadData();
+                this._renderAll();
+                this._updateSyncStatus();
+
+                // Update Load Timestamp
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                this._saveTimestamp('lastPull', timeStr);
+                if (this.lastLoadDisplay) this.lastLoadDisplay.textContent = `最終更新: ${timeStr}`;
+                // Success message removed as per user request
             } else {
                 alert(`ID 「${id}」 のデータはGitHub上に見つかりませんでした。`);
             }
@@ -1016,6 +1148,49 @@ class RoutineApp {
         gradient.addColorStop(0.5, hexToRgba(color, 0.4));
         gradient.addColorStop(1, hexToRgba(color, 1));
         return gradient;
+    }
+
+    _saveTimestamp(key, val) {
+        const ts = JSON.parse(localStorage.getItem('rs_sync_timestamps') || '{}');
+        ts[key] = val;
+        localStorage.setItem('rs_sync_timestamps', JSON.stringify(ts));
+    }
+
+    /**
+     * Sanitizes the ID (keep Japanese, remove dots/slashes)
+     */
+    _sanitizeId(input) {
+        // Allow Japanese, letters, numbers, hyphens, underscores.
+        // Gist filenames cannot contain slashes.
+        return input.trim().replace(/[\\/:*?"<>|]/g, '-');
+    }
+
+    _generateSyncId() {
+        const adjs = this.idWords.adj;
+        const nouns = this.idWords.noun;
+        const randomAdj = adjs[Math.floor(Math.random() * adjs.length)];
+        const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+
+        let id = `${randomAdj}${randomNoun}`;
+
+        // Add current sync ID input value if empty
+        this.syncIdInput.value = id;
+        this.syncId = id;
+        this._saveData();
+    }
+
+    _updateSyncStatus() {
+        if (this.syncId && this.ghToken) {
+            this.syncStatus.classList.remove('inactive');
+            this.syncStatus.classList.add('active');
+            this.syncStatus.style.color = '#03DAC6'; // Teal for active
+            this.syncStatus.title = "同期有効";
+        } else {
+            this.syncStatus.classList.remove('active');
+            this.syncStatus.classList.add('inactive');
+            this.syncStatus.style.color = '#555'; // Grey for inactive
+            this.syncStatus.title = "同期オフ";
+        }
     }
 }
 

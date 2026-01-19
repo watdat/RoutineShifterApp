@@ -1,0 +1,140 @@
+/* --- クラウド同期UI (Refactored) --- */
+.sync-section {
+    padding: 1.2rem;
+}
+
+.sync-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.sync-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--secondary-color);
+    font-weight: 400;
+}
+
+.sync-token-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gh-token-wrapper {
+    width: 120px;
+    opacity: 0.3;
+    transition: opacity 0.3s;
+}
+
+.gh-token-input {
+    width: 100%;
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.5);
+    outline: none;
+}
+
+.btn-share {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    filter: brightness(0.8);
+    padding: 0;
+}
+
+.sync-control-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Row 1: ID Input */
+.sync-id-row {
+    position: relative;
+    width: 100%;
+}
+
+.sync-id-input {
+    width: 100%;
+    padding: 12px 10px 12px 30px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    font-size: 1.0rem;
+    color: white;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.sync-status-dot {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: #555;
+}
+
+/* Row 2: Buttons */
+.sync-btn-row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.sync-block-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.sync-block-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.sync-block-label {
+    font-size: 0.9rem;
+    font-weight: normal;
+    color: white;
+}
+
+.sync-block-time {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-new-id {
+    flex: 0 0 auto;
+    padding: 0 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    font-weight: normal;
+}
+
+.btn-new-id:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* --- レスポンシブ対応 (既存への追記/上書き) --- */
+@media (max-width: 900px) {
+    /* ... existing responsive rules ... */
+}

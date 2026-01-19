@@ -435,9 +435,6 @@ button:active {
 }
 
 /* --- クラウド同期UI --- */
-.sync-section {
-    /* margin-top removed to align with sidebar top */
-}
 
 .sync-status {
     font-size: 1rem;
@@ -505,4 +502,237 @@ button:active {
         width: 100%;
         box-sizing: border-box;
     }
+}
+
+/* --- クラウド同期UI (Refactored) --- */
+.sync-section {
+    padding: 1.2rem;
+}
+
+.sync-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.sync-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--secondary-color);
+    font-weight: 400;
+}
+
+.sync-token-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gh-token-wrapper {
+    width: 120px;
+    opacity: 0.3;
+    transition: opacity 0.3s;
+}
+
+input.gh-token-input {
+    width: 100%;
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.5);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.btn-share {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    filter: brightness(0.8);
+    padding: 0;
+}
+
+.sync-control-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Row 1: ID Input */
+.sync-id-row {
+    position: relative;
+    width: 100%;
+}
+
+input.sync-id-input {
+    width: 100%;
+    padding: 12px 10px 12px 30px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    font-size: 1.0rem;
+    color: white;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.sync-status-dot {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: #555;
+}
+
+/* Row 2: Buttons */
+.sync-btn-row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.sync-block-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.sync-block-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.sync-block-label {
+    font-size: 0.9rem;
+    font-weight: normal;
+    color: white;
+}
+
+.sync-block-time {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-new-id {
+    flex: 0 0 auto;
+    padding: 0 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    font-weight: normal;
+    transition: all 0.2s;
+}
+
+.btn-new-id:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* --- レスポンシブ対忁E(既存への追訁E上書ぁE --- */
+@media (max-width: 900px) {
+    /* ... existing responsive rules ... */
+}
+
+/* --- Shift Control UI Refactor --- */
+.shift-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.8rem;
+}
+
+.usage-guide-link {
+    color: var(--secondary-color);
+    text-decoration: none;
+    font-size: 0.85rem;
+    border-bottom: 1px dotted var(--secondary-color);
+    opacity: 0.8;
+}
+
+.shift-ui-container {
+    display: flex;
+    gap: 15px;
+    align-items: stretch;
+    height: 80px;
+    /* Fixed height for alignment */
+}
+
+.shift-btn-group {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-shift-tall {
+    width: 68px;
+    height: 100%;
+    border-radius: 12px;
+    font-size: 1.8rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--primary-color);
+    border: 1px solid var(--panel-border);
+    cursor: pointer;
+    transition: background 0.2s;
+    padding: 0;
+}
+
+.btn-shift-tall:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.shift-value-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.shift-display-box {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    /* Slightly tighter radius */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    /* Gap above slider */
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.shift-display-input {
+    background: none;
+    border: none;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #fff;
+    width: 100%;
+    outline: none;
+    padding: 0;
+}
+
+/* Override existing shift-range margin */
+.shift-section .shift-range {
+    margin-top: 0;
+    width: 100%;
 }
