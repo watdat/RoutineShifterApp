@@ -85,7 +85,7 @@
         <section class="glass-panel manual-section">
             <h2>どんなアプリ？</h2>
             <p>1日のスケジュールを可視化し、「もし活動時間を〇時間ずらしたらどうなる？」をシミュレーションできるアプリです。<br>
-                ・たとえ起きる時間が違っても、いつも通りのルーティーンを過ごしたいあなたをサポート。<br>・海外旅行の時差ボケ調整や、夜勤・早朝勤務の生活リズム検討にも便利です。
+                ・起きる時間が違っても、いつも通りのルーティーンを過ごしたいあなたをサポート。<br>・海外旅行の時差ボケ調整や、夜勤・早朝勤務の生活リズム検討にも便利です。
             </p>
         </section>
 
@@ -125,12 +125,15 @@
 
             <h3>ルーティン終了チャイム</h3>
             <p>各スケジュールの終了時刻にチャイムを鳴らすことができます（Sound選択から音色を選べます）。</p>
-            <p style="font-size: 0.9rem; margin-top: 0.5rem; color: var(--secondary-color);">※スマホで鳴らすためのポイント：</p>
-            <ul class="step-list" style="font-size: 0.9rem;">
-                <li>画面を一度以上タップする（操作を行う）</li>
-                <li>マナーモード（消音設定）を解除する</li>
-                <li>ブラウザを開いたまま画面を点灯させておく</li>
-            </ul>
+            <p style="font-size: 0.9rem; margin-top: 0.25rem; color: var(--secondary-color);">※スマホで鳴らすためのポイント：</p>
+            <p style="font-size: 1.0rem;">
+                <strong><span style="color: var(--secondary-color);">✔</span>
+                    画面を1タップまたは操作する　
+                    <span style="color: var(--secondary-color);">✔</span>
+                    マナーモードを解除する　
+                    <span style="color: var(--secondary-color);">✔</span>
+                    ブラウザ画面を開き点灯させておく</strong>
+            </p>
 
             <h3>『一括登録』の使い方</h3>
             <p>以下例のテキストを入力またはコピペ→「テキストから読み込む」ボタンを押下します。</p>
@@ -141,6 +144,18 @@
                 夜の余暇 18:00-20:00<br>
                 睡眠 21:00-05:00<br>
             </div>
+
+            <h3>GitHubトークン再発行・設定手順</h3>
+            <ol style="padding-left: 1.5rem; color: #aaa; font-size: 0.9rem;">
+                <li style="margin-bottom: 0.5rem;">
+                    <strong>GitHubでの再発行:</strong> <a href="https://github.com/settings/tokens" target="_blank"
+                        style="color: var(--secondary-color);">設定ページ</a>を開く → 「Generate new token (classic)」を選択 →
+                    名前を入力・期限を「No expiration」に設定 → <strong>gist</strong> に ✔ を入れて発行 → 文字列をコピー。
+                </li>
+                <li style="margin-bottom: 0.5rem;"><strong>アプリへの設定:</strong> アプリ右上の「Token」欄に貼り付ける。</li>
+                <li style="margin-bottom: 0.5rem;"><strong>他デバイスへの同期:</strong> 「📲」アイコンから発行されたURLを別ブラウザで開く →
+                    トークンも自動同期される。</li>
+            </ol>
         </section>
 
         <footer style="text-align: center; margin-top: 3rem; color: #666; font-size: 0.8rem;">
