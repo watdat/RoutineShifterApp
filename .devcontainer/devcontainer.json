@@ -1,0 +1,20 @@
+{
+    "name": "RoutineShifterApp Dev Environment",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.live-server",
+                "ms-ceintl.vscode-language-pack-ja",
+                "dbaeumer.vscode-eslint"
+            ]
+        }
+    },
+    // コンテナが立ち上がった後に実行したいコマンドがあればここに書きます
+    // "postCreateCommand": "npm install",
+    
+    // コンテナ内で使うユーザーを指定（デフォルトは node）
+    "remoteUser": "node"
+}
