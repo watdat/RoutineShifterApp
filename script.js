@@ -693,6 +693,9 @@ class RoutineApp {
         if (!text) return alert('テキストを入力してください');
         if (!confirm('既存のデータは上書きされます。よろしいですか？')) return;
 
+        // Auto-reset shift to ±0 when importing base data
+        this._applyShift(0, 'other');
+
         const newRoutines = [];
 
         // Regex Patterns:
