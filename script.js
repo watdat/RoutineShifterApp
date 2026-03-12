@@ -70,7 +70,6 @@ class RoutineApp {
 
         // Controls
         this.addBtn = document.getElementById('addBtn');
-        this.clearBtn = document.getElementById('clearBtn');
         this.importBtn = document.getElementById('importBtn');
         this.shiftInput = document.getElementById('shiftHours');
         this.shiftSlider = document.getElementById('shiftSlider');
@@ -78,7 +77,6 @@ class RoutineApp {
         this.shiftPlus = document.getElementById('shiftPlus');
 
         // Display Areas
-        this.routineList = document.getElementById('routineList');
         this.statusDisplay = document.getElementById('shiftedActivity');
         this.shiftedScheduleList = document.getElementById('shiftedScheduleList');
         this.currentTimeDisplay = document.getElementById('currentTimeDisplay');
@@ -118,7 +116,6 @@ class RoutineApp {
     _addEventListeners() {
         // Routing Management
         if (this.addBtn) this.addBtn.addEventListener('click', () => this.addRoutine());
-        if (this.clearBtn) this.clearBtn.addEventListener('click', () => this.clearRoutines());
         if (this.importBtn) this.importBtn.addEventListener('click', () => this.importFromText());
 
         // Shift Controls
@@ -389,7 +386,6 @@ class RoutineApp {
     // ==========================================
 
     _renderAll() {
-        this.renderList();
         this.renderChart();
         this.updateShiftInfo();
         this._updateCheckboxTimes();
@@ -407,25 +403,10 @@ class RoutineApp {
     }
 
     /**
-     * Renders the vertical list of original routines (right panel)
+     * Renders the vertical list of original routines (REMOVED in current version)
      */
     renderList() {
-        this.routineList.innerHTML = '';
-        this.routines.sort((a, b) => a.start.localeCompare(b.start));
-
-        this.routines.forEach(r => {
-            const div = document.createElement('div');
-            div.className = 'routine-item';
-            div.innerHTML = `
-                <div style="display:flex; align-items:center;">
-                    <div style="width:12px; height:12px; background:${r.color}; border-radius:50%; margin-right:8px;"></div>
-                    <span>${r.start} - ${r.end}</span>
-                    <strong>${r.name}</strong>
-                </div>
-                <button class="delete-btn" onclick="app.deleteRoutine(${r.id})">×</button>
-            `;
-            this.routineList.appendChild(div);
-        });
+        // No longer used: baseline list removed for cleaner UX
     }
 
     /**
@@ -657,8 +638,14 @@ class RoutineApp {
             const li = document.createElement('li');
             li.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
             li.innerHTML = `
-                <div><span>${timeRangeStr}</span>: <strong>${r.name}</strong></div>
-                <span style="opacity:0.7; font-size:0.9em;">(${durStr})</span>
+                <div style="display:flex; align-items:center;">
+                    <div style="width:10px; height:10px; background:${r.color}; border-radius:50%; margin-right:8px;"></div>
+                    <span>${timeRangeStr}</span>: <strong>${r.name}</strong>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="opacity:0.6; font-size:0.85em;">(${durStr})</span>
+                    <button class="delete-shifted-btn" onclick="app.deleteRoutine(${r.id})" title="この予定を削除">×</button>
+                </div>
             `;
             this.shiftedScheduleList.appendChild(li);
 
@@ -753,14 +740,27 @@ class RoutineApp {
 
     addRoutine() {
         const name = this.activityInput.value;
-        const start = this.startTimeInput.value;
-        const end = this.endTimeInput.value;
+        const startRaw = this.startTimeInput.value;
+        const endRaw = this.endTimeInput.value;
 
-        if (!name || !start || !end) return alert('全ての項目を入力してください。');
+        if (!name || !startRaw || !endRaw) return alert('全ての項目を入力してください。');
+
+        // Reverse-Shift Logic:
+        // InternalBaseTime = InputTime - currentShift
+        const reverseShift = (timeStr) => {
+            const dec = this._timeToDecimal(timeStr);
+            const baseDec = this._normalizeHour(dec - this.shiftHours);
+            return this._decimalToHHMM(baseDec);
+        };
+
+        const startBase = reverseShift(startRaw);
+        const endBase = reverseShift(endRaw);
 
         this.routines.push({
             id: Date.now(),
-            name, start, end,
+            name,
+            start: startBase,
+            end: endBase,
             color: this.colors[this.routines.length % this.colors.length]
         });
 
