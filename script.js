@@ -126,10 +126,10 @@ class RoutineApp {
             this.shiftSlider.addEventListener('input', (e) => this._applyShift(e.target.value, 'slider'));
         }
         if (this.shiftMinus) {
-            this.shiftMinus.addEventListener('click', () => this._applyShift(this.shiftHours - 0.5));
+            this.shiftMinus.addEventListener('click', () => this._applyShift(this.shiftHours - 0.25));
         }
         if (this.shiftPlus) {
-            this.shiftPlus.addEventListener('click', () => this._applyShift(this.shiftHours + 0.5));
+            this.shiftPlus.addEventListener('click', () => this._applyShift(this.shiftHours + 0.25));
         }
 
         // Settings / Customization
@@ -321,11 +321,7 @@ class RoutineApp {
             localStorage.setItem('rs_gh_token', this.ghToken);
         }
 
-        // Auto-save to cloud if sync is active (with debounce to avoid rate limits)
-        if (this.syncId && this.ghToken) {
-            if (this.syncTimer) clearTimeout(this.syncTimer);
-            this.syncTimer = setTimeout(() => this._saveToCloud(false), 5000); // 5 sec delay
-        }
+        // AUTO-SAVE REMOVED: Saving to cloud is now manual only via the 'Save' button.
     }
 
     /**
