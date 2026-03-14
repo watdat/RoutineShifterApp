@@ -75,6 +75,7 @@ class RoutineApp {
         this.shiftSlider = document.getElementById('shiftSlider');
         this.shiftMinus = document.getElementById('shiftMinus');
         this.shiftPlus = document.getElementById('shiftPlus');
+        this.resetShiftBtn = document.getElementById('resetShift');
 
         // Display Areas
         this.statusDisplay = document.getElementById('shiftedActivity');
@@ -130,6 +131,11 @@ class RoutineApp {
         }
         if (this.shiftPlus) {
             this.shiftPlus.addEventListener('click', () => this._applyShift(this.shiftHours + 0.25));
+        }
+
+        // Reset Control
+        if (this.resetShiftBtn) {
+            this.resetShiftBtn.addEventListener('click', () => this._applyShift(0));
         }
 
         // Settings / Customization
@@ -640,7 +646,7 @@ class RoutineApp {
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span style="opacity:0.6; font-size:0.85em;">(${durStr})</span>
-                    <button class="delete-shifted-btn" onclick="app.deleteRoutine(${r.id})" title="この予定を削除">×</button>
+                    <button class="delete-shifted-btn" onclick="app.deleteRoutine('${r.id}')" title="この予定を削除">×</button>
                 </div>
             `;
             this.shiftedScheduleList.appendChild(li);
@@ -659,9 +665,11 @@ class RoutineApp {
             }
         });
 
-        // Status Banner Update
-        this.statusDisplay.textContent = activeActivity === "(Free Time)" ? activeActivity : `${activeActivity} (${activeDuration})`;
-        this.statusDisplay.style.color = activeActivity === "(Free Time)" ? "#aaa" : "#bb86fc";
+        // Status Banner Update (Only if element exists)
+        if (this.statusDisplay) {
+            this.statusDisplay.textContent = activeActivity === "(Free Time)" ? activeActivity : `${activeActivity} (${activeDuration})`;
+            this.statusDisplay.style.color = activeActivity === "(Free Time)" ? "#aaa" : "#bb86fc";
+        }
     }
 
     /**
@@ -777,7 +785,9 @@ class RoutineApp {
     }
 
     deleteRoutine(id) {
-        this.routines = this.routines.filter(r => r.id !== id);
+        console.log(`[Debug] Attempting to delete routine with ID: ${id}`);
+        // Robust comparison: convert both to string to handle potential type differences (e.g. number vs string from sync)
+        this.routines = this.routines.filter(r => String(r.id) !== String(id));
         this._renderAll();
         this._saveData();
     }
@@ -1195,3 +1205,4 @@ class RoutineApp {
 
 // Global initialization
 const app = new RoutineApp();
+window.app = app; // Explicitly expose to global scope for HTML onclick handlers

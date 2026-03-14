@@ -24,8 +24,11 @@
             <!-- Upper Panel: Header & Manual -->
             <section class="glass-panel sidebar-upper">
                 <header>
-                    <h1><a href="https://watdat.github.io/RoutineShifterApp/"
-                            style="color: inherit; text-decoration: none;">Daily Routine Shifter</a></h1>
+                    <div class="title-header">
+                        <h1><a href="https://watdat.github.io/RoutineShifterApp/"
+                                style="color: inherit; text-decoration: none;">Daily Routine Shifter</a></h1>
+                        <a href="manual.html" class="usage-guide-link">ℹ️ 使い方ガイド</a>
+                    </div>
                     <p>1日のルーティンを可視化し、時間をシフトして確認できます</p>
 
                     <!-- Memo Field -->
@@ -82,8 +85,8 @@
             <section class="glass-panel sidebar-lower">
                 <section class="shift-section">
                     <div class="shift-header">
-                        <label class="shift-label" style="margin:0;">時間をずらす (時間)</label>
-                        <a href="manual.html" class="usage-guide-link">ℹ️ 使い方ガイド</a>
+                        <label class="shift-label" style="margin:0;">時間をずらす (15分毎)</label>
+                        <span id="resetShift" class="reset-link">シフトをリセット</span>
                     </div>
 
                     <div class="shift-ui-container">
@@ -106,7 +109,6 @@
 
                 <div class="divider"></div>
 
-               
 
                 <section class="list-section">
                     <h2>シフト後のスケジュール一覧</h2>

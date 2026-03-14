@@ -59,6 +59,12 @@ html {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
+.title-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 h1 {
     font-size: 1.5rem;
     color: var(--primary-color);
@@ -655,12 +661,32 @@ input.sync-id-input {
     margin-bottom: 0.8rem;
 }
 
-.usage-guide-link {
+.reset-link {
+    color: var(--secondary-color);
+    text-decoration: none;
+    font-size: 1.1rem;
+    opacity: 0.8;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    font-weight: normal;
+}
+
+.reset-link:hover {
+    opacity: 1;
+}
+
+.usage-guide-link,
+.usage-guide-link:visited {
     color: var(--secondary-color);
     text-decoration: none;
     font-size: 0.85rem;
     border-bottom: 1px dotted var(--secondary-color);
     opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.usage-guide-link:hover {
+    opacity: 1;
 }
 
 .shift-ui-container {
