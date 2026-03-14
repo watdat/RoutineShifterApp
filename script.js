@@ -388,6 +388,7 @@ class RoutineApp {
     // ==========================================
 
     _renderAll() {
+        this._syncWakeWithSleep();
         this.renderChart();
         this.updateShiftInfo();
         this._updateCheckboxTimes();
@@ -678,14 +679,31 @@ class RoutineApp {
     _updateCheckboxTimes() {
         if (!this.baseWakeupTimeInput) return;
 
-        const baseDec = this._timeToDecimal(this.baseWakeupTimeInput.value);
+        const val = this.baseWakeupTimeInput.value;
+        const baseDec = this._timeToDecimal(val);
 
         this.dynamicTimeSpans.forEach(span => {
             const offset = parseFloat(span.getAttribute('data-offset'));
-            // MODIFIED: Removed shiftHours to decouple from shift logic
-            const targetDec = this._normalizeHour(baseDec + offset);
-            span.textContent = this._decimalToHHMM(targetDec);
+            if (isNaN(baseDec)) {
+                span.textContent = "--:--";
+            } else {
+                const targetDec = this._normalizeHour(baseDec + offset);
+                span.textContent = this._decimalToHHMM(targetDec);
+            }
         });
+    }
+
+    _syncWakeWithSleep() {
+        if (!this.baseWakeupTimeInput) return;
+
+        const sleepRoutine = this.routines.find(r => r.name === "睡眠");
+        if (sleepRoutine) {
+            const baseEnd = this._timeToDecimal(sleepRoutine.end);
+            const shiftedEnd = this._normalizeHour(baseEnd + this.shiftHours);
+            this.baseWakeupTimeInput.value = this._decimalToHHMM(shiftedEnd);
+        } else {
+            this.baseWakeupTimeInput.value = "";
+        }
     }
 
     // ==========================================
@@ -1083,11 +1101,17 @@ class RoutineApp {
     // ==========================================
 
     _timeToDecimal(str) {
-        const [h, m] = str.split(':').map(Number);
+        if (!str || typeof str !== 'string') return NaN;
+        const parts = str.split(':');
+        if (parts.length < 2) return NaN;
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (isNaN(h) || isNaN(m)) return NaN;
         return h + m / 60;
     }
 
     _decimalToHHMM(dec) {
+        if (isNaN(dec)) return "--:--";
         const h = Math.floor(dec) % 24;
         const m = Math.round((dec - Math.floor(dec)) * 60) % 60;
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
