@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Dev Containerでの開発デモンストレーション: Antigravityが見守っています！ -->
+<!-- windsurf側でDev Containerでの開発デモ: テストOKを確認 -->
 <html lang="ja">
 
 <head>
@@ -123,6 +123,35 @@
         <!-- Main Content: Inputs -->
         <main class="main-content">
             <div class="input-area">
+                
+                <!-- Individual Settings -->
+                <section class="individual-settings glass-panel">
+                    <h2>ルーティン個別設定</h2>
+                    <div class="input-group">
+                        <input type="text" id="activityName" placeholder="活動名 (例: 睡眠)">
+                        <div class="time-inputs">
+                            <label>開始: <input type="time" id="startTime"></label>
+                            <label>終了: <input type="time" id="endTime"></label>
+                        </div>
+                        <button id="addBtn" class="btn-primary">追加</button>
+                    </div>
+                </section>
+
+                <!-- Bulk Import -->
+                <section class="bulk-import glass-panel">
+                    <div class="shift-header">
+                        <h2>一括登録</h2>
+                        <a href="manual.html" class="usage-guide-link">ℹ️ 使い方ガイド</a>
+                    </div>
+                    <div class="input-group">
+                        <textarea id="bulkInput" rows="5" placeholder="例：
+睡眠 22:00-05:00
+仕事 09:00 - 17:00"></textarea>
+                        <button id="importBtn" class="btn-primary" style="margin-top:0.5rem;">テキストから読み込む</button>
+                        <p style="font-size:0.8rem; color:#aaa; margin-top:0.5rem;">※既存のルーティンは上書きされます</p>
+                    </div>
+                </section>
+                
                 <section class="sync-section glass-panel">
                     <div class="sync-header">
                         <h2>IDデータ読み書き</h2>
@@ -160,36 +189,7 @@
                         </div>
                     </div>
                 </section>
-
-                <!-- Individual Settings -->
-                <section class="individual-settings glass-panel">
-                    <h2>ルーティン個別設定</h2>
-                    <div class="input-group">
-                        <input type="text" id="activityName" placeholder="活動名 (例: 睡眠)">
-                        <div class="time-inputs">
-                            <label>開始: <input type="time" id="startTime"></label>
-                            <label>終了: <input type="time" id="endTime"></label>
-                        </div>
-                        <button id="addBtn" class="btn-primary">追加</button>
-                    </div>
-                </section>
-
-                <!-- Bulk Import -->
-                <section class="bulk-import glass-panel">
-                    <div class="shift-header">
-                        <h2>一括登録</h2>
-                        <a href="manual.html" class="usage-guide-link">ℹ️ 使い方ガイド</a>
-                    </div>
-                    <div class="input-group">
-                        <textarea id="bulkInput" rows="5" placeholder="例：
-睡眠 22:00-05:00
-仕事 09:00 - 17:00"></textarea>
-                        <button id="importBtn" class="btn-primary" style="margin-top:0.5rem;">テキストから読み込む</button>
-                        <p style="font-size:0.8rem; color:#aaa; margin-top:0.5rem;">※既存のルーティンは上書きされます</p>
-                    </div>
-                </section>
             </div>
-        </main>
         </main>
     </div>
 
