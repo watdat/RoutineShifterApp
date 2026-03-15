@@ -114,7 +114,8 @@ class DataManager {
     }
 
     loadColorTheme() {
-        return localStorage.getItem(CONFIG.STORAGE_KEYS.COLOR_THEME) || 'modern_british';
+        const id = localStorage.getItem(CONFIG.STORAGE_KEYS.COLOR_THEME);
+        return (id && CONFIG.THEMES[id]) ? id : 'modern_british';
     }
 
     loadLocal() {
@@ -553,8 +554,7 @@ class RoutineApp {
     }
 
     _addEventListeners() {
-            this._saveAll();
-        });
+        this.els.themeSelect?.addEventListener('change', (e) => this._handleThemeChange(e.target.value));
         this.els.add?.addEventListener('click', () => this.addRoutine());
         this.els.import?.addEventListener('click', () => this.importFromText());
         this.els.shift?.addEventListener('change', (e) => this._applyShift(Utils.offsetStrToDecimal(e.target.value), 'input'));
@@ -752,6 +752,22 @@ class RoutineApp {
             this.els.copyMsg.textContent = "コピーしました！";
             setTimeout(() => this.els.copyMsg.textContent = "", 3000);
         });
+    }
+
+    _handleThemeChange(themeId) {
+        this.currentThemeId = themeId;
+        const newTheme = CONFIG.THEMES[this.currentThemeId];
+        this.currentColors = newTheme.colors;
+        
+        // Update colors for all existing routines
+        this.data.routines.forEach((r, i) => {
+            r.color = this.currentColors[i % this.currentColors.length];
+        });
+
+        this.data.saveColorTheme(this.currentThemeId);
+        this.chart.updateColors(this.currentColors);
+        this._renderAll();
+        this._saveAll();
     }
 
     _checkUrlParams() {
