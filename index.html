@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- windsurf側でDev Containerでの開発デモ: テストOKを確認 -->
 <html lang="ja">
 
 <head>
@@ -9,9 +8,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Quicksand:wght@300;400;500;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Quicksand:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
@@ -25,52 +22,42 @@
             <section class="glass-panel sidebar-upper">
                 <header>
                     <div class="title-header">
-                        <h1><a href="https://watdat.github.io/RoutineShifterApp/"
-                                style="color: inherit; text-decoration: none;">Daily Routine Shifter</a></h1>
+                        <h1><a href="https://watdat.github.io/RoutineShifterApp/">Daily Routine Shifter</a></h1>
                         <a href="manual.html" class="usage-guide-link">ℹ️ 使い方ガイド</a>
                     </div>
                     <p>1日のルーティンを可視化し、時間をシフトして確認できます</p>
 
                     <!-- Memo Field -->
-                    <div style="margin-top: 1.5rem;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <label for="memoInput"
-                                style="color:var(--text-color); font-size:1rem; margin-bottom:0.5rem; opacity:0.9;">Memo:</label>
-                            <div style="font-size: 0.8rem; opacity: 0.8; display: flex; align-items: center; gap: 8px;">
-                                <select id="chimeSelect"
-                                    style="background: rgba(0,0,0,0.3); color: var(--text-color); border: 1px solid var(--panel-border); border-radius: 4px; padding: 1px 4px; font-size: 0.85rem; cursor: pointer; outline: none;">
+                    <div class="memo-container">
+                        <div class="memo-header">
+                            <label for="memoInput" class="memo-label">Memo:</label>
+                            <div class="sound-controls">
+                                <select id="chimeSelect">
                                     <option value="none">None</option>
                                     <option value="bell">Soft Bell</option>
                                     <option value="ding">Ding</option>
                                     <option value="marimba">Marimba</option>
                                     <option value="digital">Digital</option>
                                 </select>
-                                <button id="testChimeBtn" class="btn-secondary"
-                                    style="padding: 2px 8px; font-size: 0.8rem; border-radius: 4px;">Sound Test</button>
+                                <button id="testChimeBtn" class="btn-secondary">Sound Test</button>
                             </div>
                         </div>
-                        <textarea id="memoInput" class="memo-area"
-                            placeholder="(Todoやちょっとしたメモなど、ここに置いておくことができます)"></textarea>
+                        <textarea id="memoInput" class="memo-area" placeholder="(Todoやちょっとしたメモなど、ここに置いておくことができます)"></textarea>
                     </div>
 
                     <!-- Checkbox Row -->
                     <div class="checkbox-row">
-                        <label class="checkbox-item wakeup-item"
-                            style="color:var(--text-color); opacity:0.9; margin-right:0.5rem; font-weight:normal;">
-                            Wake: <input type="time" id="baseWakeupTime" value="05:00"
-                                style="width:auto; padding:2px 8px; font-size:1.0rem; border:1px solid #ffffff; border-radius:15px; background:rgba(0,0,0,0.3); color:var(--secondary-color); font-family:inherit; cursor:pointer; outline:none;">
+                        <label class="checkbox-item wakeup-item">
+                            Wake: <input type="time" id="baseWakeupTime" value="05:00">
                         </label>
                         <label class="checkbox-item">
-                            <input type="checkbox" id="checkWake0"> Wake+0h (<span class="dynamic-time"
-                                data-offset="0">05:00</span>)
+                            <input type="checkbox" id="checkWake0"> Wake+0h (<span class="dynamic-time" data-offset="0">05:00</span>)
                         </label>
                         <label class="checkbox-item">
-                            <input type="checkbox" id="checkWake8"> Wake+8h (<span class="dynamic-time"
-                                data-offset="8">13:00</span>)
+                            <input type="checkbox" id="checkWake8"> Wake+8h (<span class="dynamic-time" data-offset="8">13:00</span>)
                         </label>
                         <label class="checkbox-item">
-                            <input type="checkbox" id="checkWake16"> Wake+16h (<span class="dynamic-time"
-                                data-offset="16">21:00</span>)
+                            <input type="checkbox" id="checkWake16"> Wake+16h (<span class="dynamic-time" data-offset="16">21:00</span>)
                         </label>
                     </div>
                 </header>
@@ -85,7 +72,7 @@
             <section class="glass-panel sidebar-lower">
                 <section class="shift-section">
                     <div class="shift-header">
-                        <label class="shift-label" style="margin:0;">時間をずらす (15分毎)</label>
+                        <label class="shift-label">時間をずらす (15分毎)</label>
                         <span id="resetShift" class="reset-link">シフトをリセット</span>
                     </div>
 
@@ -101,14 +88,12 @@
                             <div class="shift-display-box">
                                 <input type="text" id="shiftHours" class="shift-display-input" value="+00:00" readonly>
                             </div>
-                            <input type="range" id="shiftSlider" class="shift-range" value="0" min="-24" max="24"
-                                step="0.25">
+                            <input type="range" id="shiftSlider" class="shift-range" value="0" min="-24" max="24" step="0.25">
                         </div>
                     </div>
                 </section>
 
                 <div class="divider"></div>
-
 
                 <section class="list-section">
                     <h2>シフト後のスケジュール一覧</h2>
@@ -146,8 +131,8 @@
                         <textarea id="bulkInput" rows="5" placeholder="例：
 睡眠 22:00-05:00
 仕事 09:00 - 17:00"></textarea>
-                        <button id="importBtn" class="btn-primary" style="margin-top:0.5rem;">テキストから読み込む</button>
-                        <p style="font-size:0.8rem; color:#aaa; margin-top:0.5rem;">※既存のルーティンは上書きされます</p>
+                        <button id="importBtn" class="btn-primary">テキストから読み込む</button>
+                        <p class="import-note">※既存のルーティンは上書きされます</p>
                     </div>
                 </section>
                 
@@ -193,23 +178,16 @@
     </div>
 
     <!-- Share Modal -->
-    <div id="shareModal"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
-        <div class="glass-panel" style="padding:2rem; text-align:center; max-width:90%; position:relative;">
-            <button id="closeShareModal"
-                style="position:absolute; top:10px; right:15px; background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
-            <h3 style="margin-top:0; color:var(--secondary-color);">スマホへ設定を転送</h3>
-
-            <div id="qrcode"
-                style="background:white; padding:15px; border-radius:8px; margin:1rem auto; width: fit-content;"></div>
-
-            <p style="font-size:0.9rem; margin-bottom:1rem;">カメラで読み取るか、URLをコピーしてください</p>
-
-            <div style="display:flex; gap:0.5rem; justify-content:center;">
-                <button id="copyLinkBtn" class="btn-secondary" style="font-size:0.9rem;">🔗設定リンクをコピー</button>
+    <div id="shareModal">
+        <div class="share-panel">
+            <button id="closeShareModal">&times;</button>
+            <h3 class="share-title">スマホへ設定を転送</h3>
+            <div id="qrcode"></div>
+            <p class="share-note">カメラで読み取るか、URLをコピーしてください</p>
+            <div class="share-btn-row">
+                <button id="copyLinkBtn" class="btn-secondary">🔗設定リンクをコピー</button>
             </div>
-            <div id="copyMsg" style="height:1.2em; color:var(--secondary-color); font-size:0.8rem; margin-top:0.5rem;">
-            </div>
+            <div id="copyMsg"></div>
         </div>
     </div>
 

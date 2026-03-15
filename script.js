@@ -2,428 +2,246 @@
 Chart.register(ChartDataLabels);
 
 /**
- * RoutineApp - Main application class for Daily Routine Shifter
- * Refactored version (Local only)
+ * Constants & Utilities
  */
-class RoutineApp {
+const CONFIG = {
+    COLORS: [
+        '#BB86FC', '#03DAC6', '#CF6679', '#FFB74D', '#4FC3F7',
+        '#AED581', '#FFD54F', '#90CAF9', '#F48FB1', '#80CBC4'
+    ],
+    STORAGE_KEYS: {
+        DATA: 'routineData',
+        TOKEN: 'rs_gh_token',
+        TIMESTAMPS: 'rs_sync_timestamps',
+        GIST_ID_PREFIX: 'rs_gist_id_'
+    }
+};
+
+const Utils = {
+    timeToDecimal(str) {
+        if (!str || typeof str !== 'string') return NaN;
+        const [h, m] = str.split(':').map(n => parseInt(n, 10));
+        return h + (m || 0) / 60;
+    },
+
+    decimalToHHMM(dec) {
+        if (isNaN(dec)) return "--:--";
+        const h = Math.floor(dec) % 24;
+        const m = Math.round((dec - Math.floor(dec)) * 60) % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    },
+
+    normalizeHour(h) {
+        const val = h % 24;
+        return val < 0 ? val + 24 : val;
+    },
+
+    decimalToOffsetStr(dec) {
+        const sign = dec >= 0 ? "+" : "-";
+        const absDec = Math.abs(dec);
+        const h = Math.floor(absDec);
+        const m = Math.round((absDec - h) * 60);
+        return `${sign}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    },
+
+    offsetStrToDecimal(str) {
+        if (!str) return 0;
+        str = str.trim();
+        const timeMatch = str.match(/^([+-])?(\d{1,2}):(\d{2})$/);
+        if (timeMatch) {
+            const isNegative = timeMatch[1] === "-";
+            const h = parseInt(timeMatch[2], 10);
+            const m = parseInt(timeMatch[3], 10);
+            const dec = h + m / 60;
+            return isNegative ? -dec : dec;
+        }
+        return parseFloat(str) || 0;
+    },
+
+    sanitizeId(input) {
+        return input.trim().replace(/[\\/:*?"<>|]/g, '-');
+    }
+};
+
+/**
+ * DataManager - Handles persistence and cloud sync
+ */
+class DataManager {
     constructor() {
-        // --- State Variables ---
         this.routines = [];
         this.shiftHours = 0;
-        this.chart = null;
-        this.audioCtx = null;
         this.syncId = "";
-        this.ghToken = ""; // GitHub Personal Access Token
-        this.gistId = "";  // Cached Gist ID for this session
-
-        // --- Japanese Word Lists for IDs ---
+        this.ghToken = "";
         this.idWords = {
             adj: ['あおい', 'あかい', 'しろい', 'まるい', 'はやい', 'ひかる', 'ゆるい', 'ふしぎ', 'きいろ', 'みどり'],
-            noun: ['ねこ', 'いぬ', 'うさぎ', 'ごはん', 'おもち', 'みかん', 'おすし', 'ゆき', 'ほし', 'つき']
+            noun: ['ねこ', 'いぬ', 'うさぎ', 'ごはん', 'おもち', 'みかん', 'おすすし', 'ゆき', 'ほし', 'つき']
         };
-
-        // --- Configuration ---
-        this.colors = [
-            '#BB86FC', '#03DAC6', '#CF6679', '#FFB74D', '#4FC3F7',
-            '#AED581', '#FFD54F', '#90CAF9', '#F48FB1', '#80CBC4'
-        ];
-
-        // Initializing UI and Data
-        this._initElements();
-        this._loadData();
-        this._addEventListeners();
-
-        // Initial render
-        this._renderAll();
-
-        // Start periodic sync (Once per minute, synced to 00s)
-        this._startPeriodicTasks();
     }
 
-    /**
-     * Synced periodic update loop
-     */
-    _startPeriodicTasks() {
-        this._updatePeriodicTasks();
-
-        const now = new Date();
-        const delay = (60 - now.getSeconds()) * 1000 + 100; // Small buffer
-
-        setTimeout(() => {
-            setInterval(() => this._updatePeriodicTasks(), 60000);
-            this._updatePeriodicTasks();
-        }, delay);
-    }
-
-    // ==========================================
-    // 1. INITIALIZATION
-    // ==========================================
-
-    _initElements() {
-        // Form Inputs
-        this.activityInput = document.getElementById('activityName');
-        this.startTimeInput = document.getElementById('startTime');
-        this.endTimeInput = document.getElementById('endTime');
-        this.bulkInput = document.getElementById('bulkInput');
-        this.memoInput = document.getElementById('memoInput');
-        this.baseWakeupTimeInput = document.getElementById('baseWakeupTime');
-
-        // Controls
-        this.addBtn = document.getElementById('addBtn');
-        this.importBtn = document.getElementById('importBtn');
-        this.shiftInput = document.getElementById('shiftHours');
-        this.shiftSlider = document.getElementById('shiftSlider');
-        this.shiftMinus = document.getElementById('shiftMinus');
-        this.shiftPlus = document.getElementById('shiftPlus');
-        this.resetShiftBtn = document.getElementById('resetShift');
-
-        // Display Areas
-        this.statusDisplay = document.getElementById('shiftedActivity');
-        this.shiftedScheduleList = document.getElementById('shiftedScheduleList');
-        this.currentTimeDisplay = document.getElementById('currentTimeDisplay');
-        this.dynamicTimeSpans = document.querySelectorAll('.dynamic-time');
-        this.ctx = document.getElementById('routineChart').getContext('2d');
-
-        // Chime Controls
-        this.chimeSelect = document.getElementById('chimeSelect');
-        this.testChimeBtn = document.getElementById('testChimeBtn');
-
-        // Wake Checkboxes
-        this.wakeCheckboxes = [
-            document.getElementById('checkWake0'),
-            document.getElementById('checkWake8'),
-            document.getElementById('checkWake16')
-        ];
-
-        // Sync Elements
-        this.syncIdInput = document.getElementById('syncIdInput');
-        this.genSyncIdBtn = document.getElementById('genSyncIdBtn');
-        this.loadSyncBtn = document.getElementById('loadSyncBtn');
-        this.pushSyncBtn = document.getElementById('pushSyncBtn');
-        this.lastSavedDisplay = document.getElementById('lastSavedDisplay');
-        this.lastLoadDisplay = document.getElementById('lastLoadDisplay');
-        this.ghTokenInput = document.getElementById('ghTokenInput');
-        this.ghTokenWrapper = document.getElementById('ghTokenWrapper');
-        this.syncStatus = document.getElementById('syncStatus');
-
-        // Share Elements
-        this.shareSettingsBtn = document.getElementById('shareSettingsBtn');
-        this.shareModal = document.getElementById('shareModal');
-        this.closeShareModal = document.getElementById('closeShareModal');
-        this.copyLinkBtn = document.getElementById('copyLinkBtn');
-        this.copyMsg = document.getElementById('copyMsg');
-    }
-
-    _addEventListeners() {
-        // Routing Management
-        if (this.addBtn) this.addBtn.addEventListener('click', () => this.addRoutine());
-        if (this.importBtn) this.importBtn.addEventListener('click', () => this.importFromText());
-
-        // Shift Controls
-        if (this.shiftInput) {
-            this.shiftInput.addEventListener('change', (e) => this._applyShift(this._offsetStrToDecimal(e.target.value), 'input'));
-        }
-        if (this.shiftSlider) {
-            this.shiftSlider.addEventListener('input', (e) => this._applyShift(e.target.value, 'slider'));
-        }
-        if (this.shiftMinus) {
-            this.shiftMinus.addEventListener('click', () => this._applyShift(this.shiftHours - 0.25));
-        }
-        if (this.shiftPlus) {
-            this.shiftPlus.addEventListener('click', () => this._applyShift(this.shiftHours + 0.25));
-        }
-
-        // Reset Control
-        if (this.resetShiftBtn) {
-            this.resetShiftBtn.addEventListener('click', () => this._applyShift(0));
-        }
-
-        // Settings / Customization
-        if (this.baseWakeupTimeInput) {
-            this.baseWakeupTimeInput.addEventListener('change', () => {
-                this._handleWakeTimeChange();
-            });
-        }
-        if (this.memoInput) {
-            this.memoInput.addEventListener('input', () => this._saveData());
-        }
-
-        // Chime Controls
-        if (this.testChimeBtn) {
-            this.testChimeBtn.addEventListener('click', () => this.playChime());
-        }
-        if (this.chimeSelect) {
-            this.chimeSelect.addEventListener('change', () => {
-                if (this.chimeSelect.value !== 'none') this._initAudio();
-                this._saveData();
-            });
-        }
-
-        // Wake Checkbox persistence
-        if (this.wakeCheckboxes) {
-            this.wakeCheckboxes.forEach(cb => {
-                if (cb) {
-                    cb.addEventListener('change', () => this._saveData());
-                }
-            });
-        }
-
-        // Sync Controls
-        if (this.genSyncIdBtn) this.genSyncIdBtn.addEventListener('click', () => this._generateSyncId());
-        if (this.loadSyncBtn) this.loadSyncBtn.addEventListener('click', () => this._loadFromCloud());
-        if (this.pushSyncBtn) this.pushSyncBtn.addEventListener('click', () => this._saveToCloud(true));
-
-        if (this.syncIdInput) {
-            this.syncIdInput.addEventListener('change', () => {
-                this.syncId = this.syncIdInput.value.trim();
-                this._saveData();
-                this._updateSyncStatus();
-            });
-        }
-
-        if (this.ghTokenInput) {
-            this.ghTokenInput.addEventListener('change', () => {
-                this.ghToken = this.ghTokenInput.value.trim();
-                this._saveData();
-                this._updateSyncStatus();
-            });
-            // Visual feedback: Fade out when not focused and has a value
-            this.ghTokenInput.addEventListener('focus', () => {
-                if (this.ghTokenWrapper) {
-                    this.ghTokenWrapper.style.opacity = "1";
-                    this.ghTokenInput.style.color = "white";
-                }
-            });
-            this.ghTokenInput.addEventListener('blur', () => {
-                this._updateTokenVisibility();
-            });
-        }
-
-        // --- SHARE SETTINGS (QR/Link) ---
-        if (this.shareSettingsBtn) {
-            this.shareSettingsBtn.addEventListener('click', () => this._openShareModal());
-        }
-        if (this.closeShareModal) {
-            this.closeShareModal.addEventListener('click', () => this.shareModal.style.display = 'none');
-        }
-        if (this.shareModal) {
-            this.shareModal.addEventListener('click', (e) => {
-                if (e.target === this.shareModal) this.shareModal.style.display = 'none';
-            });
-        }
-        if (this.copyLinkBtn) {
-            this.copyLinkBtn.addEventListener('click', () => this._copyShareLink());
-        }
-
-        // --- URL Param Check (Auto Import) ---
-        this._checkUrlParams();
-    }
-
-    // ==========================================
-    // 1-B. SHARE & URL IMPORT
-    // ==========================================
-
-    _openShareModal() {
-        if (!this.syncId || !this.ghToken) {
-            return alert("まずは同期IDとトークンを設定してください。");
-        }
-
-        const url = new URL(window.location.href);
-        url.searchParams.set('id', this.syncId);
-        url.searchParams.set('token', this.ghToken);
-        const shareUrl = url.toString();
-
-        // Show Modal
-        this.shareModal.style.display = 'flex';
-        this.copyMsg.textContent = "";
-
-        // Generate QR
-        const qrContainer = document.getElementById('qrcode');
-        qrContainer.innerHTML = ""; // clear previous
-        new QRCode(qrContainer, {
-            text: shareUrl,
-            width: 180,
-            height: 180
-        });
-
-        this.currentShareUrl = shareUrl;
-    }
-
-    _copyShareLink() {
-        if (!this.currentShareUrl) return;
-        navigator.clipboard.writeText(this.currentShareUrl).then(() => {
-            this.copyMsg.textContent = "リンクをコピーしました！";
-            setTimeout(() => this.copyMsg.textContent = "", 3000);
-        });
-    }
-
-    _checkUrlParams() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const importId = urlParams.get('id');
-        const importToken = urlParams.get('token');
-
-        if (importId && importToken) {
-            // Clean URL bar immediately to hide token
-            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-            window.history.replaceState({ path: newUrl }, '', newUrl);
-
-            // Step 3: Apply Settings (Automatically, no confirmation)
-            this.syncId = importId;
-            this.ghToken = importToken;
-
-            // Update UI
-            if (this.syncIdInput) this.syncIdInput.value = this.syncId;
-            if (this.ghTokenInput) {
-                this.ghTokenInput.value = this.ghToken;
-                this._updateTokenVisibility();
-            }
-
-            // Save credentials correctly
-            localStorage.setItem('rs_gh_token', this.ghToken);
-            this._saveData();
-
-            // Step 4 Confirmation (Load Data)
-            if (confirm(`Daily Routine Shifter：\n　ID: ${importId} のデータを読み込みますか？  （現在の内容は上書きされます）`)) {
-                this._loadFromCloud(true); // true = suppress internal confirmation
-            } else {
-                alert("設定のみ適用しました。");
-            }
-        }
-    }
-
-    _updateTokenVisibility() {
-        if (!this.ghTokenInput || !this.ghTokenWrapper) return;
-        if (this.ghTokenInput.value) {
-            this.ghTokenWrapper.style.opacity = "0.4"; // Muted but visible
-            this.ghTokenInput.style.color = "rgba(255,255,255,0.4)";
-        } else {
-            this.ghTokenWrapper.style.opacity = "0.75"; // Ready to enter
-            this.ghTokenInput.style.color = "white";
-        }
-    }
-
-    // ==========================================
-    // 2. DATA PERSISTENCE
-    // ==========================================
-
-    /**
-     * Consolidates all app state into a single JSON object in LocalStorage
-     */
-    _saveData() {
+    saveLocal(extraData = {}) {
         const data = {
             routines: this.routines,
             shiftHours: this.shiftHours,
-            memo: this.memoInput ? this.memoInput.value : "",
-            baseWakeupTime: this.baseWakeupTimeInput ? this.baseWakeupTimeInput.value : "05:00",
-            chimeType: this.chimeSelect ? this.chimeSelect.value : "none",
-            wakeChecks: this.wakeCheckboxes.map(cb => cb ? cb.checked : false),
-            syncId: this.syncId
+            syncId: this.syncId,
+            ...extraData
         };
-        localStorage.setItem('routineData', JSON.stringify(data));
-
-        // Save token separately so it doesn't get pushed to Gist (prevents auto-revocation)
+        localStorage.setItem(CONFIG.STORAGE_KEYS.DATA, JSON.stringify(data));
         if (this.ghToken) {
-            localStorage.setItem('rs_gh_token', this.ghToken);
+            localStorage.setItem(CONFIG.STORAGE_KEYS.TOKEN, this.ghToken);
         }
-
-        // AUTO-SAVE REMOVED: Saving to cloud is now manual only via the 'Save' button.
     }
 
-    /**
-     * Restores app state from LocalStorage
-     */
-    _loadData() {
+    loadLocal() {
         try {
-            const saved = localStorage.getItem('routineData');
-            if (!saved) return;
+            const saved = localStorage.getItem(CONFIG.STORAGE_KEYS.DATA);
+            if (!saved) return null;
 
             const data = JSON.parse(saved);
             this.routines = data.routines || [];
             this.shiftHours = data.shiftHours || 0;
-
-            if (this.memoInput && data.memo !== undefined) {
-                this.memoInput.value = data.memo;
-            }
-            if (this.baseWakeupTimeInput && data.baseWakeupTime) {
-                this.baseWakeupTimeInput.value = data.baseWakeupTime;
-            }
-            if (this.chimeSelect && data.chimeType) {
-                this.chimeSelect.value = data.chimeType;
-            }
-
             this.syncId = data.syncId || "";
-            this.ghToken = localStorage.getItem('rs_gh_token') || ""; // Separate key
-            if (this.syncIdInput) this.syncIdInput.value = this.syncId;
-            if (this.ghTokenInput) {
-                this.ghTokenInput.value = this.ghToken;
-                this._updateTokenVisibility();
-            }
-            this._updateSyncStatus();
-
-            if (data.wakeChecks) {
-                this.wakeCheckboxes.forEach((cb, i) => {
-                    if (cb && data.wakeChecks[i] !== undefined) {
-                        cb.checked = data.wakeChecks[i];
-                    }
-                });
-            }
-
-            // Sync UI inputs with loaded state
-            this.shiftInput.value = this._decimalToOffsetStr(this.shiftHours);
-            if (this.shiftSlider) this.shiftSlider.value = this.shiftHours;
-
-            // Restore Timestamps
-            const ts = JSON.parse(localStorage.getItem('rs_sync_timestamps') || '{}');
-            if (this.lastLoadDisplay) this.lastLoadDisplay.textContent = `最終更新: ${ts.lastPull || '--:--'}`;
-            if (this.lastSavedDisplay) this.lastSavedDisplay.textContent = `最終更新: ${ts.lastPush || '--:--'}`;
-
+            this.ghToken = localStorage.getItem(CONFIG.STORAGE_KEYS.TOKEN) || "";
+            return data;
         } catch (e) {
-            console.error("Data load failed. Storage might be corrupted.", e);
+            console.error("Data load failed:", e);
+            return null;
         }
     }
 
-    // ==========================================
-    // 3. UI RENDERING & UPDATES
-    // ==========================================
-
-    _renderAll() {
-        this._syncWakeWithSleep();
-        this.renderChart();
-        this.updateShiftInfo();
-        this._updateCheckboxTimes();
+    saveTimestamp(key, val) {
+        const ts = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.TIMESTAMPS) || '{}');
+        ts[key] = val;
+        localStorage.setItem(CONFIG.STORAGE_KEYS.TIMESTAMPS, JSON.stringify(ts));
     }
 
-    /**
-     * Updates current time display and background logic
-     */
-    _updatePeriodicTasks() {
-        // Redraw chart to update current time marker & central clock effectively
-        if (this.chart) this.chart.update();
-
-        // Background check for routine completion chime
-        this.checkChime();
+    getTimestamps() {
+        return JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.TIMESTAMPS) || '{}');
     }
 
-    /**
-     * Renders the vertical list of original routines (REMOVED in current version)
-     */
-    renderList() {
-        // No longer used: baseline list removed for cleaner UX
+    generateSyncId() {
+        const randomAdj = this.idWords.adj[Math.floor(Math.random() * this.idWords.adj.length)];
+        const randomNoun = this.idWords.noun[Math.floor(Math.random() * this.idWords.noun.length)];
+        return `${randomAdj}${randomNoun}`;
     }
 
-    /**
-     * Main chart rendering logic using Chart.js
-     */
-    renderChart() {
+    async githubFetch(url, options = {}) {
+        if (!this.ghToken) throw new Error("GitHub Token Missing");
+        const headers = {
+            'Authorization': `token ${this.ghToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+            ...(options.headers || {})
+        };
+        let finalUrl = url;
+        if (!options.method || options.method === 'GET') {
+            finalUrl += (url.includes('?') ? '&' : '?') + `t=${Date.now()}`;
+        }
+        const resp = await fetch(finalUrl, { ...options, headers });
+        if (resp.status === 401) throw new Error("GitHubトークンが無効、または有効期限切れです");
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(`Status: ${resp.status} - ${errData.message || '不明なエラー'}`);
+        }
+        return resp;
+    }
+
+    async saveToCloud() {
+        if (!this.ghToken || !this.syncId) throw new Error("IDまたはトークンが不足しています");
+        const id = Utils.sanitizeId(this.syncId);
+        const filename = `rs-sync-${id}.json`;
+
+        let cleanData = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.DATA) || '{}');
+        delete cleanData.ghToken; // Security: Strip token
+
+        const dataStr = JSON.stringify(cleanData);
+
+        const gistsResp = await this.githubFetch("https://api.github.com/gists");
+        const gists = await gistsResp.json();
+        const matches = gists.filter(g => Object.keys(g.files).some(key => key.normalize() === filename.normalize()));
+        
+        if (matches.length > 0) {
+            matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        }
+
+        let targetGistId = (matches.length > 0) ? matches[0].id : null;
+        let resp;
+
+        if (targetGistId) {
+            resp = await this.githubFetch(`https://api.github.com/gists/${targetGistId}`, {
+                method: 'PATCH',
+                body: JSON.stringify({
+                    description: `RoutineShifter Sync: ${id} (Updated: ${new Date().toLocaleString()})`,
+                    files: { [filename]: { content: dataStr } }
+                })
+            });
+        } else {
+            resp = await this.githubFetch("https://api.github.com/gists", {
+                method: 'POST',
+                body: JSON.stringify({
+                    description: `RoutineShifter Sync: ${id} (Created: ${new Date().toLocaleString()})`,
+                    public: false,
+                    files: { [filename]: { content: dataStr } }
+                })
+            });
+            const newGist = await resp.json();
+            targetGistId = newGist.id;
+        }
+
+        // Cleanup clones
+        if (matches.length > 1) {
+            for (const gist of matches.slice(1)) {
+                await this.githubFetch(`https://api.github.com/gists/${gist.id}`, { method: 'DELETE' }).catch(e => console.warn(e));
+            }
+        }
+
+        if (resp && resp.ok) {
+            const nowTime = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+            this.saveTimestamp('lastPush', nowTime);
+            return nowTime;
+        }
+        throw new Error("保存に失敗しました");
+    }
+
+    async loadFromCloud() {
+        if (!this.ghToken || !this.syncId) throw new Error("IDまたはトークンが不足しています");
+        const id = Utils.sanitizeId(this.syncId);
+        const filename = `rs-sync-${id}.json`;
+
+        const gistsResp = await this.githubFetch("https://api.github.com/gists");
+        const gists = await gistsResp.json();
+        const matches = gists.filter(g => Object.keys(g.files).some(key => key.normalize() === filename.normalize()));
+
+        if (matches.length === 0) throw new Error("データが見つかりませんでした");
+
+        matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        const detailsResp = await this.githubFetch(matches[0].url);
+        const details = await detailsResp.json();
+        const actualKey = Object.keys(details.files).find(key => key.normalize() === filename.normalize());
+        const data = JSON.parse(details.files[actualKey].content);
+
+        localStorage.setItem(CONFIG.STORAGE_KEYS.DATA, JSON.stringify(data));
+        const nowTime = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        this.saveTimestamp('lastPull', nowTime);
+        return { data, time: nowTime };
+    }
+}
+
+/**
+ * ChartManager - Handles Chart.js visualization
+ */
+class ChartManager {
+    constructor(canvasId, app) {
+        this.ctx = document.getElementById(canvasId).getContext('2d');
+        this.app = app;
+        this.chart = null;
+    }
+
+    render(routines, shiftHours) {
         if (this.chart) this.chart.destroy();
 
         const timeline = new Array(1440).fill(null);
-
-        // Map routines to minute-by-minute timeline
-        this.routines.forEach(r => {
-            let startMin = Math.round(this._timeToDecimal(r.start) * 60);
-            let endMin = Math.round(this._timeToDecimal(r.end) * 60);
-
+        routines.forEach(r => {
+            let startMin = Math.round(Utils.timeToDecimal(r.start) * 60);
+            let endMin = Math.round(Utils.timeToDecimal(r.end) * 60);
             if (startMin < endMin) {
                 for (let i = startMin; i < endMin; i++) timeline[i] = r;
             } else {
@@ -432,7 +250,6 @@ class RoutineApp {
             }
         });
 
-        // Convert timeline into Chart.js datasets (segments)
         const dataPoints = [];
         const bgColors = [];
         const labels = [];
@@ -444,31 +261,15 @@ class RoutineApp {
                 currentDuration++;
             } else {
                 dataPoints.push(currentDuration / 60);
-                if (currentRoutine) {
-                    bgColors.push(currentRoutine.color);
-                    labels.push(currentRoutine.name);
-                } else {
-                    bgColors.push('rgba(255, 255, 255, 0.05)');
-                    labels.push(null);
-                }
+                bgColors.push(currentRoutine ? currentRoutine.color : 'rgba(255, 255, 255, 0.05)');
+                labels.push(currentRoutine ? currentRoutine.name : null);
                 currentRoutine = timeline[i];
                 currentDuration = 1;
             }
         }
         dataPoints.push(currentDuration / 60);
-        if (currentRoutine) {
-            bgColors.push(currentRoutine.color);
-            labels.push(currentRoutine.name);
-        } else {
-            bgColors.push('rgba(255, 255, 255, 0.05)');
-            labels.push(null);
-        }
-
-        // Clock Face Plugin (Draws numbers and central clock)
-        const clockPlugin = {
-            id: 'clockFace',
-            afterDraw: (chart) => this._drawClockFace(chart)
-        };
+        bgColors.push(currentRoutine ? currentRoutine.color : 'rgba(255, 255, 255, 0.05)');
+        labels.push(currentRoutine ? currentRoutine.name : null);
 
         this.chart = new Chart(this.ctx, {
             type: 'doughnut',
@@ -484,17 +285,15 @@ class RoutineApp {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: false,
-                rotation: this.shiftHours * 15,
+                rotation: shiftHours * 15,
                 layout: { padding: 35 },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
                             label: (context) => {
-                                const value = context.raw;
-                                const h = Math.floor(value);
-                                const m = Math.round((value - h) * 60);
-                                return `${context.chart.data.labels[context.dataIndex] || 'Free Time'}: ${h}h ${m}m`;
+                                const val = context.raw;
+                                return `${context.chart.data.labels[context.dataIndex] || 'Free Time'}: ${Math.floor(val)}h ${Math.round((val % 1) * 60)}m`;
                             }
                         }
                     },
@@ -507,14 +306,14 @@ class RoutineApp {
                     },
                 }
             },
-            plugins: [clockPlugin]
+            plugins: [{
+                id: 'clockFace',
+                afterDraw: (chart) => this._drawClockFace(chart, shiftHours)
+            }]
         });
     }
 
-    /**
-     * Helper to draw clock UI over the chart
-     */
-    _drawClockFace(chart) {
+    _drawClockFace(chart, shiftHours) {
         const { ctx, chartArea: { top, bottom, left, right, width, height } } = chart;
         const centerX = (left + right) / 2;
         const centerY = (top + bottom) / 2;
@@ -523,46 +322,36 @@ class RoutineApp {
         ctx.save();
         ctx.translate(centerX, centerY);
 
-        // 1. Draw Hour Ticks and Numbers
         for (let i = 0; i < 24; i++) {
             const angle = (i * 15 - 90) * (Math.PI / 180);
             const isMajor = i % 3 === 0;
-            const tickLength = isMajor ? 10 : 10;
-
-            // Tick marks (staying at current rim)
             ctx.beginPath();
             ctx.moveTo(Math.cos(angle) * (outerRadius - 5), Math.sin(angle) * (outerRadius - 5));
-            ctx.lineTo(Math.cos(angle) * (outerRadius - 5 + tickLength), Math.sin(angle) * (outerRadius - 5 + tickLength));
+            ctx.lineTo(Math.cos(angle) * (outerRadius + 5), Math.sin(angle) * (outerRadius + 5));
             ctx.strokeStyle = isMajor ? '#bb86fc' : 'rgba(255, 255, 255, 0.3)';
             ctx.lineWidth = isMajor ? 2 : 1;
             ctx.stroke();
 
-            // Hour numbers (MOVED OUTSIDE)
-            const textRadius = outerRadius + 14; // Positive offset to go outside
-            const textX = Math.cos(angle) * textRadius;
-            const textY = Math.sin(angle) * textRadius;
+            const textRadius = outerRadius + 18;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-
             if (isMajor) {
                 ctx.font = 'bold 16px Inter, sans-serif';
+                ctx.strokeStyle = '#121212';
                 ctx.lineWidth = 3;
-                ctx.strokeStyle = '#121212'; // Darker outline for contrast
-                ctx.strokeText(i.toString(), textX, textY);
+                ctx.strokeText(i.toString(), Math.cos(angle) * textRadius, Math.sin(angle) * textRadius);
                 ctx.fillStyle = '#ffffff';
-                ctx.fillText(i.toString(), textX, textY);
+                ctx.fillText(i.toString(), Math.cos(angle) * textRadius, Math.sin(angle) * textRadius);
             } else {
                 ctx.font = '12px Inter, sans-serif';
                 ctx.fillStyle = '#aaaaaa';
-                ctx.fillText(i.toString(), textX, textY);
+                ctx.fillText(i.toString(), Math.cos(angle) * textRadius, Math.sin(angle) * textRadius);
             }
         }
 
-        // 2. Draw Current Time Marker
         const now = new Date();
         const currentDec = now.getHours() + now.getMinutes() / 60;
         const currentAngle = (currentDec * 15 - 90) * (Math.PI / 180);
-
         ctx.beginPath();
         ctx.arc(Math.cos(currentAngle) * (outerRadius + 4), Math.sin(currentAngle) * (outerRadius + 4), 6, 0, Math.PI * 2);
         ctx.fillStyle = '#03DAC6';
@@ -571,15 +360,12 @@ class RoutineApp {
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // 3. Central Digital Clock (Shows Base Time)
         const timeFontSize = Math.min(width, height) / 5;
-        const baseTime = new Date(now.getTime() - (this.shiftHours * 60 * 60 * 1000));
+        const baseTime = new Date(now.getTime() - (shiftHours * 3600000));
         const timeStr = baseTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-
         ctx.fillStyle = '#03DAC6';
         ctx.font = `${timeFontSize}px 'Quicksand', sans-serif`;
         ctx.fillText(timeStr, 0, 0);
-
         ctx.font = `${timeFontSize * 0.18}px 'Quicksand', sans-serif`;
         ctx.fillStyle = '#aaaaaa';
         ctx.fillText('基準時刻', 0, -timeFontSize * 0.6);
@@ -587,283 +373,48 @@ class RoutineApp {
         ctx.restore();
     }
 
-    /**
-     * Unified Logic for applying shift changes
-     */
-    _applyShift(val, source = 'other') {
-        let numVal = typeof val === 'string' ? parseFloat(val) : val;
-        numVal = isNaN(numVal) ? 0 : numVal;
-        numVal = Math.max(-24, Math.min(24, numVal)); // Clamp
-
-        this.shiftHours = numVal;
-
-        // Sync Inputs
-        if (source !== 'input') {
-            this.shiftInput.value = this._decimalToOffsetStr(this.shiftHours);
-        }
-        if (source !== 'slider' && this.shiftSlider) {
-            this.shiftSlider.value = this.shiftHours;
-        }
-
-        this._renderAll();
-        this._saveData();
-    }
-
-    /**
-     * Updates the shifted schedule text list (left panel)
-     */
-    updateShiftInfo() {
-        const now = new Date();
-        const currentDecimal = now.getHours() + now.getMinutes() / 60;
-        this.shiftedScheduleList.innerHTML = '';
-
-        let activeActivity = "(Free Time)";
-        let activeDuration = "";
-
-        const sorted = [...this.routines].sort((a, b) => a.start.localeCompare(b.start));
-
-        sorted.forEach(r => {
-            const startDec = this._timeToDecimal(r.start);
-            const endDec = this._timeToDecimal(r.end);
-
-            // Calculate Duration
-            let dur = endDec - startDec;
-            if (dur < 0) dur += 24;
-            const durStr = this._decimalToHHMM(dur);
-
-            // Shifted Range
-            const shiftedStart = this._normalizeHour(startDec + this.shiftHours);
-            const shiftedEnd = this._normalizeHour(endDec + this.shiftHours);
-            const timeRangeStr = `${this._decimalToHHMM(shiftedStart)} - ${this._decimalToHHMM(shiftedEnd)}`;
-
-            // UI List Item
-            const li = document.createElement('li');
-            li.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
-            li.innerHTML = `
-                <div style="display:flex; align-items:center;">
-                    <div style="width:10px; height:10px; background:${r.color}; border-radius:50%; margin-right:8px;"></div>
-                    <span>${timeRangeStr}</span>: <strong>${r.name}</strong>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="opacity:0.6; font-size:0.85em;">(${durStr})</span>
-                    <button class="delete-shifted-btn" onclick="app.deleteRoutine('${r.id}')" title="この予定を削除">×</button>
-                </div>
-            `;
-            this.shiftedScheduleList.appendChild(li);
-
-            // Active Check
-            let isActive = false;
-            if (shiftedStart < shiftedEnd) {
-                if (currentDecimal >= shiftedStart && currentDecimal < shiftedEnd) isActive = true;
-            } else {
-                if (currentDecimal >= shiftedStart || currentDecimal < shiftedEnd) isActive = true;
-            }
-
-            if (isActive) {
-                activeActivity = r.name;
-                activeDuration = durStr;
-            }
-        });
-
-        // Status Banner Update (Only if element exists)
-        if (this.statusDisplay) {
-            this.statusDisplay.textContent = activeActivity === "(Free Time)" ? activeActivity : `${activeActivity} (${activeDuration})`;
-            this.statusDisplay.style.color = activeActivity === "(Free Time)" ? "#aaa" : "#bb86fc";
-        }
-    }
-
-    /**
-     * Updates the live ticking times for checkboxes in the UI
-     */
-    _updateCheckboxTimes() {
-        if (!this.baseWakeupTimeInput) return;
-
-        const val = this.baseWakeupTimeInput.value;
-        const baseDec = this._timeToDecimal(val);
-
-        this.dynamicTimeSpans.forEach(span => {
-            const offset = parseFloat(span.getAttribute('data-offset'));
-            if (isNaN(baseDec)) {
-                span.textContent = "--:--";
-            } else {
-                const targetDec = this._normalizeHour(baseDec + offset);
-                span.textContent = this._decimalToHHMM(targetDec);
-            }
-        });
-    }
-
-    _syncWakeWithSleep() {
-        if (!this.baseWakeupTimeInput) return;
-
-        const sleepRoutine = this.routines.find(r => r.name === "睡眠");
-        if (sleepRoutine) {
-            const baseEnd = this._timeToDecimal(sleepRoutine.end);
-            const shiftedEnd = this._normalizeHour(baseEnd + this.shiftHours);
-            const newValue = this._decimalToHHMM(shiftedEnd);
-            // Only update if value is different to avoid cursor jump/recursion issues if any
-            if (this.baseWakeupTimeInput.value !== newValue) {
-                this.baseWakeupTimeInput.value = newValue;
-            }
-        }
-    }
-
-    /**
-     * Handles manual change of Wake time input
-     */
-    _handleWakeTimeChange() {
-        if (!this.baseWakeupTimeInput) return;
-
-        const val = this.baseWakeupTimeInput.value;
-        if (!val) return;
-
-        const sleepRoutine = this.routines.find(r => r.name === "睡眠");
-        if (!sleepRoutine) {
-            console.warn("Routine '睡眠' not found. Cannot sync wake time.");
-            this._updateCheckboxTimes();
-            this._saveData();
-            return;
-        }
-
-        const targetDec = this._timeToDecimal(val);
-        const baseEndDec = this._timeToDecimal(sleepRoutine.end);
-
-        // Calculate shift needed to align base sleep end with target wake time
-        let newShift = targetDec - baseEndDec;
-
-        // Keep shift within -24 to 24 range and pick shortest path if possible
-        if (newShift > 12) newShift -= 24;
-        if (newShift < -12) newShift += 24;
-
-        this._applyShift(newShift);
-    }
-
-    // ==========================================
-    // 4. ACTION HANDLERS
-    // ==========================================
-
-    importFromText() {
-        const text = this.bulkInput.value.trim();
-        if (!text) return alert('テキストを入力してください');
-        if (!confirm('既存のデータは上書きされます。よろしいですか？')) return;
-
-        // Auto-reset shift to ±0 when importing base data
-        this._applyShift(0, 'other');
-
-        const newRoutines = [];
-
-        // Regex Patterns:
-        // A. "Name 09:00 - 17:00" (Existing)
-        const regexA = /(.+?)\s+(\d{1,2}:\d{2})\s*[-~]\s*(\d{1,2}:\d{2})/;
-        // B. "09:00 - 17:00: Name" (From Shifted Schedule List copy)
-        const regexB = /(\d{1,2}:\d{2})\s*[-~]\s*(\d{1,2}:\d{2})\s*[:]\s*(.+)/;
-
-        text.split('\n').forEach(line => {
-            const str = line.trim();
-            if (!str) return;
-
-            let match = str.match(regexB);
-            if (match) {
-                // Handle Pattern B: Time first
-                newRoutines.push({
-                    id: Date.now() + Math.random(),
-                    name: match[3].trim(),
-                    start: match[1].padStart(5, '0'),
-                    end: match[2].padStart(5, '0'),
-                    color: this.colors[newRoutines.length % this.colors.length]
-                });
-            } else {
-                match = str.match(regexA);
-                if (match) {
-                    // Handle Pattern A: Name first
-                    newRoutines.push({
-                        id: Date.now() + Math.random(),
-                        name: match[1].trim(),
-                        start: match[2].padStart(5, '0'),
-                        end: match[3].padStart(5, '0'),
-                        color: this.colors[newRoutines.length % this.colors.length]
-                    });
-                }
-            }
-        });
-
-        if (newRoutines.length === 0) return alert('読み取り可能なデータが見つかりませんでした。');
-
-        this.routines = newRoutines;
-        this.bulkInput.value = '';
-        this._renderAll();
-        this._saveData();
-    }
-
-    addRoutine() {
-        const name = this.activityInput.value;
-        const startRaw = this.startTimeInput.value;
-        const endRaw = this.endTimeInput.value;
-
-        if (!name || !startRaw || !endRaw) return alert('全ての項目を入力してください。');
-
-        // Reverse-Shift Logic:
-        // InternalBaseTime = InputTime - currentShift
-        const reverseShift = (timeStr) => {
-            const dec = this._timeToDecimal(timeStr);
-            const baseDec = this._normalizeHour(dec - this.shiftHours);
-            return this._decimalToHHMM(baseDec);
+    _getSegmentGradient(ctx, colors) {
+        const { chart, dataIndex, chartArea } = ctx;
+        const color = colors[dataIndex];
+        if (!color || color.startsWith('rgba') || !chartArea) return color;
+        const cX = (chartArea.left + chartArea.right) / 2;
+        const cY = (chartArea.top + chartArea.bottom) / 2;
+        const r = Math.min(chartArea.width, chartArea.height) / 2;
+        const grad = chart.ctx.createRadialGradient(cX, cY, 0, cX, cY, r);
+        const hexToRgba = (hex, a) => {
+            const res = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return res ? `rgba(${parseInt(res[1], 16)}, ${parseInt(res[2], 16)}, ${parseInt(res[3], 16)}, ${a})` : hex;
         };
+        grad.addColorStop(0.5, hexToRgba(color, 0.4));
+        grad.addColorStop(1, hexToRgba(color, 1));
+        return grad;
+    }
+}
 
-        const startBase = reverseShift(startRaw);
-        const endBase = reverseShift(endRaw);
-
-        this.routines.push({
-            id: Date.now(),
-            name,
-            start: startBase,
-            end: endBase,
-            color: this.colors[this.routines.length % this.colors.length]
-        });
-
-        this.activityInput.value = '';
-        this._renderAll();
-        this._saveData();
+/**
+ * AudioManager - Handles sound effects
+ */
+class AudioManager {
+    constructor() {
+        this.ctx = null;
     }
 
-    clearRoutines() {
-        if (!confirm('全てのデータを消去してもよろしいですか？')) return;
-        this.routines = [];
-        this.shiftHours = 0;
-        this._renderAll();
-        localStorage.removeItem('routineData'); // Clear storage
+    init() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
     }
 
-    deleteRoutine(id) {
-        console.log(`[Debug] Attempting to delete routine with ID: ${id}`);
-        // Robust comparison: convert both to string to handle potential type differences (e.g. number vs string from sync)
-        this.routines = this.routines.filter(r => String(r.id) !== String(id));
-        this._renderAll();
-        this._saveData();
-    }
-
-    // ==========================================
-    // 5. AUDIO LOGIC
-    // ==========================================
-
-    _initAudio() {
-        if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
-    }
-
-    playChime() {
-        const type = this.chimeSelect ? this.chimeSelect.value : 'none';
-        if (type === 'none') return;
-
-        this._initAudio();
-        const ctx = this.audioCtx;
+    play(type) {
+        if (!type || type === 'none') return;
+        this.init();
+        const ctx = this.ctx;
         const now = ctx.currentTime;
-
-        const playOsc = (freq, type, gainVal, decay, delay = 0) => {
+        const playOsc = (freq, t, gVal, decay, delay = 0) => {
             const osc = ctx.createOscillator();
             const g = ctx.createGain();
-            osc.type = type;
+            osc.type = t;
             osc.frequency.setValueAtTime(freq, now + delay);
-            g.gain.setValueAtTime(gainVal, now + delay);
+            g.gain.setValueAtTime(gVal, now + delay);
             g.gain.exponentialRampToValueAtTime(0.001, now + delay + decay);
             osc.connect(g);
             g.connect(ctx.destination);
@@ -871,393 +422,311 @@ class RoutineApp {
             osc.stop(now + delay + decay + 0.1);
         };
 
-        if (type === 'bell') {
-            playOsc(880, 'sine', 0.1, 1.5, 0);
-            playOsc(1760, 'sine', 0.05, 1.0, 0);
-        } else if (type === 'ding') {
-            playOsc(1200, 'triangle', 0.1, 0.5, 0);
-        } else if (type === 'marimba') {
-            playOsc(523.25, 'sine', 0.15, 0.3, 0);
-            playOsc(659.25, 'sine', 0.15, 0.3, 0.15);
-            playOsc(783.99, 'sine', 0.15, 0.3, 0.3);
-        } else if (type === 'digital') {
-            playOsc(440, 'square', 0.05, 0.1, 0);
-            playOsc(880, 'square', 0.05, 0.1, 0.1);
-        }
-    }
-
-    checkChime() {
-        const type = this.chimeSelect ? this.chimeSelect.value : 'none';
-        if (type === 'none') return;
-
-        const now = new Date();
-        const currentH = now.getHours();
-        const currentM = now.getMinutes();
-        const currentS = now.getSeconds();
-
-        // Exact minute match (00 seconds)
-        if (currentS !== 0) return;
-
-        // Check if any shifted routine ends exactly now
-        const currentDecimal = currentH + currentM / 60;
-        const routines = this.routines;
-        let shouldRing = false;
-
-        routines.forEach(r => {
-            const endDec = this._timeToDecimal(r.end);
-            // Apply shift to the routine time to see if it matches "REAL world now"
-            // Wait: Shift logic is "Virtual Time = Real Time + Shift".
-            // So if Routine ends at 10:00 (Virtual), and Shift is +1, then Real time is 09:00.
-            // ... Actually, the user wants the alarm when the *shifted* schedule hits the current time?
-            // Usually alarms are based on the displayed time matching current time.
-
-            // Logic: Compare "Current Decimal" with "Shifted End Time"
-            const shiftedEnd = this._normalizeHour(endDec + this.shiftHours);
-
-            // Allow precision error (check if close enough to current minute)
-            const diff = Math.abs(currentDecimal - shiftedEnd);
-            // Handle wrap-around diff (e.g. 23:59 vs 00:00)
-            const diff2 = Math.abs((currentDecimal + 24) - shiftedEnd);
-            const diff3 = Math.abs(currentDecimal - (shiftedEnd + 24));
-
-            // Check if diff is less than 1 minute (1/60)
-            if (diff < 0.001 || diff2 < 0.001 || diff3 < 0.001) {
-                shouldRing = true;
-            }
-        });
-
-        if (shouldRing) this.playChime();
-    }
-
-    // ==========================================
-    // 6. GITHUB SYNC (Cloud) - Refactored
-    // ==========================================
-
-    /**
-     * Helper for GitHub API calls
-     */
-    async _githubFetch(url, options = {}) {
-        if (!this.ghToken) throw new Error("GitHub Token Missing");
-
-        const headers = {
-            'Authorization': `token ${this.ghToken}`,
-            'Accept': 'application/vnd.github.v3+json',
-            ...(options.headers || {})
-        };
-
-        // Cache-busting for GET requests to ensure fresh list
-        let finalUrl = url;
-        if (!options.method || options.method === 'GET') {
-            finalUrl += `?t=${Date.now()}`;
-        }
-
-        const resp = await fetch(finalUrl, { ...options, headers });
-        if (resp.status === 401) throw new Error("GitHubトークンが無効、または有効期限切れです");
-        if (!resp.ok) {
-            const errData = await resp.json().catch(() => ({}));
-            throw new Error(`Status: ${resp.status} - ${errData.message || '不明なエラー'}`);
-        }
-        return resp;
-    }
-
-    async _saveToCloud(manual = false) {
-        const idRaw = this.syncIdInput.value.trim();
-        const token = this.ghTokenInput.value.trim();
-
-        if (manual) {
-            if (!token) return alert("GitHubトークンを入力してください");
-            if (!idRaw) return alert("同期IDを入力してください");
-        }
-        if (!token || !idRaw) return;
-
-        const id = this._sanitizeId(idRaw);
-        this.syncId = id;
-        this.ghToken = token;
-        this._updateSyncStatus();
-
-        // Explicitly clean the data before sending to GitHub to prevent auto-revocation
-        let cleanData = {};
-        try {
-            const raw = localStorage.getItem('routineData');
-            if (raw) {
-                cleanData = JSON.parse(raw);
-                delete cleanData.ghToken; // STRIP TOKEN BEFORE SENDING
-            }
-        } catch (e) {
-            console.error("Failed to parse data for clean save", e);
-        }
-        const dataStr = JSON.stringify(cleanData);
-        const filename = `rs-sync-${id}.json`;
-
-        try {
-            // 1. Fetch current gists and filter by filename (case-insensitive & normalized)
-            const gistsResp = await this._githubFetch("https://api.github.com/gists");
-            const gists = await gistsResp.json();
-
-            const matches = gists.filter(g =>
-                Object.keys(g.files).some(key => key.normalize() === filename.normalize())
-            );
-
-            // Sort matches by updated_at (newest first)
-            if (matches.length > 0) {
-                matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-            }
-
-            let resp;
-            let targetGistId = (matches.length > 0) ? matches[0].id : null;
-
-            if (targetGistId) {
-                // 2. Update the NEWEST existing gist
-                resp = await this._githubFetch(`https://api.github.com/gists/${targetGistId}`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({
-                        description: `RoutineShifter Sync: ${id} (Updated: ${new Date().toLocaleString()})`,
-                        files: { [filename]: { content: dataStr } }
-                    })
-                });
-            } else {
-                // 3. Create new if none exist
-                resp = await this._githubFetch("https://api.github.com/gists", {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        description: `RoutineShifter Sync: ${id} (Created: ${new Date().toLocaleString()})`,
-                        public: false,
-                        files: { [filename]: { content: dataStr } }
-                    })
-                });
-                const newGist = await resp.json();
-                targetGistId = newGist.id;
-            }
-
-            // 4. CLEANUP: Delete ALL OTHER redundant gists with the same sync ID
-            if (matches.length > 1) {
-                const clonesToDelete = matches.slice(1); // All except the one we updated (or newest)
-                for (const gist of clonesToDelete) {
-                    try {
-                        await this._githubFetch(`https://api.github.com/gists/${gist.id}`, { method: 'DELETE' });
-                        console.log(`Deleted redundant Gist: ${gist.id}`);
-                    } catch (e) {
-                        console.warn(`Failed to delete redundant Gist: ${gist.id}`, e);
-                    }
-                }
-            }
-
-            if (resp && resp.ok) {
-                this.gistId = targetGistId;
-                localStorage.setItem(`rs_gist_id_${id}`, targetGistId); // Persist ID
-
-                // Update Last Saved Display
-                const now = new Date();
-                const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-                this._saveTimestamp('lastPush', timeStr);
-                if (this.lastSavedDisplay) {
-                    this.lastSavedDisplay.textContent = `最終更新: ${timeStr}`;
-                }
-
-                // Removed alert as per user request
-                // if (manual) alert(`GitHub Gist への保存に成功しました！\nID: ${id}`);
-            }
-        } catch (e) {
-            console.error("GitHub sync save failed", e);
-            if (manual) alert(`保存に失敗しました:\n${e.message}\nもし「Secondary Rate Limit」と出た場合は、数分待ってからお試しください。`);
-        }
-    }
-
-    async _loadFromCloud(suppressConfirm = false) {
-        const idRaw = this.syncIdInput.value.trim();
-        const token = this.ghTokenInput.value.trim();
-
-        if (!token) return alert("GitHubトークンを入力してください");
-        if (!idRaw) return alert("同期IDを入力してください");
-
-        const id = this._sanitizeId(idRaw);
-        const filename = `rs-sync-${id}.json`;
-        this.ghToken = token;
-
-        try {
-            // Search for Gist
-            const gistsResp = await this._githubFetch("https://api.github.com/gists");
-            const gists = await gistsResp.json();
-
-            // Prioritize the most recently updated Gist for this ID
-            const matches = gists.filter(g =>
-                Object.keys(g.files).some(key => key.normalize() === filename.normalize())
-            );
-
-            let target = null;
-            if (matches.length > 0) {
-                matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-                target = matches[0];
-            }
-
-            if (target) {
-                // Get content
-                const detailsResp = await this._githubFetch(target.url);
-                const details = await detailsResp.json();
-                // Find correct key even if normalized
-                const actualKey = Object.keys(details.files).find(key => key.normalize() === filename.normalize());
-                const contentStr = details.files[actualKey].content;
-                const data = JSON.parse(contentStr);
-
-                // Confirm before loading (unless suppressed)
-                if (!suppressConfirm) {
-                    if (!confirm(`Daily Routine Shifter：\n　ID: ${id} のデータを読み込みますか？  （現在の内容は上書きされます）`)) return;
-                }
-
-                this.syncId = id;
-                this.gistId = target.id;
-                localStorage.setItem(`rs_gist_id_${id}`, target.id); // Remember ID
-                localStorage.setItem('routineData', JSON.stringify(data));
-                this._loadData();
-                this._renderAll();
-                this._updateSyncStatus();
-
-                // Update Load Timestamp
-                const now = new Date();
-                const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-                this._saveTimestamp('lastPull', timeStr);
-                if (this.lastLoadDisplay) this.lastLoadDisplay.textContent = `最終更新: ${timeStr}`;
-                // Success message removed as per user request
-            } else {
-                alert(`ID 「${id}」 のデータはGitHub上に見つかりませんでした。`);
-            }
-        } catch (e) {
-            console.error("GitHub sync load failed", e);
-            alert(`読み込みに失敗しました:\n${e.message}`);
-        }
-    }
-
-    // ==========================================
-    // 7. UTILITIES
-    // ==========================================
-
-    _timeToDecimal(str) {
-        if (!str || typeof str !== 'string') return NaN;
-        const parts = str.split(':');
-        if (parts.length < 2) return NaN;
-        const h = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10);
-        if (isNaN(h) || isNaN(m)) return NaN;
-        return h + m / 60;
-    }
-
-    _decimalToHHMM(dec) {
-        if (isNaN(dec)) return "--:--";
-        const h = Math.floor(dec) % 24;
-        const m = Math.round((dec - Math.floor(dec)) * 60) % 60;
-        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    }
-
-    /**
-     * Normalizes hour value to 0-23 range
-     */
-    _normalizeHour(h) {
-        let val = h % 24;
-        return val < 0 ? val + 24 : val;
-    }
-
-    /**
-     * Formats decimal hours to ±HH:MM format for display
-     */
-    _decimalToOffsetStr(dec) {
-        const sign = dec >= 0 ? "+" : "-";
-        const absDec = Math.abs(dec);
-        const h = Math.floor(absDec);
-        const m = Math.round((absDec - h) * 60);
-        return `${sign}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    }
-
-    /**
-     * Parses ±HH:MM or decimal format back to decimal hours
-     */
-    _offsetStrToDecimal(str) {
-        if (!str) return 0;
-        str = str.trim();
-
-        // Handle HH:MM format (maybe with ± prefix)
-        const timeMatch = str.match(/^([+-])?(\d{1,2}):(\d{2})$/);
-        if (timeMatch) {
-            const isNegative = timeMatch[1] === "-";
-            const h = parseInt(timeMatch[2], 10);
-            const m = parseInt(timeMatch[3], 10);
-            const dec = h + m / 60;
-            return isNegative ? -dec : dec;
-        }
-
-        // Fallback to simple decimal parsing
-        return parseFloat(str) || 0;
-    }
-
-
-
-    _getSegmentGradient(ctx, colors) {
-        const { chart, dataIndex } = ctx;
-        const color = colors[dataIndex];
-        if (!color || color.startsWith('rgba')) return color;
-
-        const { chartArea } = chart;
-        if (!chartArea) return color;
-
-        const cX = (chartArea.left + chartArea.right) / 2;
-        const cY = (chartArea.top + chartArea.bottom) / 2;
-        const r = Math.min(chartArea.width, chartArea.height) / 2;
-
-        const gradient = chart.ctx.createRadialGradient(cX, cY, 0, cX, cY, r);
-
-        const hexToRgba = (hex, a) => {
-            const res = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return res ? `rgba(${parseInt(res[1], 16)}, ${parseInt(res[2], 16)}, ${parseInt(res[3], 16)}, ${a})` : hex;
-        };
-
-        gradient.addColorStop(0.5, hexToRgba(color, 0.4));
-        gradient.addColorStop(1, hexToRgba(color, 1));
-        return gradient;
-    }
-
-    _saveTimestamp(key, val) {
-        const ts = JSON.parse(localStorage.getItem('rs_sync_timestamps') || '{}');
-        ts[key] = val;
-        localStorage.setItem('rs_sync_timestamps', JSON.stringify(ts));
-    }
-
-    /**
-     * Sanitizes the ID (keep Japanese, remove dots/slashes)
-     */
-    _sanitizeId(input) {
-        // Allow Japanese, letters, numbers, hyphens, underscores.
-        // Gist filenames cannot contain slashes.
-        return input.trim().replace(/[\\/:*?"<>|]/g, '-');
-    }
-
-    _generateSyncId() {
-        const adjs = this.idWords.adj;
-        const nouns = this.idWords.noun;
-        const randomAdj = adjs[Math.floor(Math.random() * adjs.length)];
-        const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-
-        let id = `${randomAdj}${randomNoun}`;
-
-        // Add current sync ID input value if empty
-        this.syncIdInput.value = id;
-        this.syncId = id;
-        this._saveData();
-    }
-
-    _updateSyncStatus() {
-        if (this.syncId && this.ghToken) {
-            this.syncStatus.classList.remove('inactive');
-            this.syncStatus.classList.add('active');
-            this.syncStatus.style.color = '#03DAC6'; // Teal for active
-            this.syncStatus.title = "同期有効";
-        } else {
-            this.syncStatus.classList.remove('active');
-            this.syncStatus.classList.add('inactive');
-            this.syncStatus.style.color = '#555'; // Grey for inactive
-            this.syncStatus.title = "同期オフ";
+        switch(type) {
+            case 'bell': playOsc(880, 'sine', 0.1, 1.5, 0); playOsc(1760, 'sine', 0.05, 1.0, 0); break;
+            case 'ding': playOsc(1200, 'triangle', 0.1, 0.5, 0); break;
+            case 'marimba': playOsc(523, 'sine', 0.15, 0.3, 0); playOsc(659, 'sine', 0.15, 0.3, 0.15); playOsc(784, 'sine', 0.15, 0.3, 0.3); break;
+            case 'digital': playOsc(440, 'square', 0.05, 0.1, 0); playOsc(880, 'square', 0.05, 0.1, 0.1); break;
         }
     }
 }
 
-// Global initialization
+/**
+ * RoutineApp - Main Orchestrator
+ */
+class RoutineApp {
+    constructor() {
+        this.data = new DataManager();
+        this.chart = new ChartManager('routineChart', this);
+        this.audio = new AudioManager();
+        this.init();
+    }
+
+    init() {
+        this._initElements();
+        const savedData = this.data.loadLocal();
+        this._applyLoadedData(savedData);
+        this._addEventListeners();
+        this._renderAll();
+        this._startClock();
+    }
+
+    _initElements() {
+        this.els = {
+            activity: document.getElementById('activityName'),
+            start: document.getElementById('startTime'),
+            end: document.getElementById('endTime'),
+            bulk: document.getElementById('bulkInput'),
+            memo: document.getElementById('memoInput'),
+            wake: document.getElementById('baseWakeupTime'),
+            shift: document.getElementById('shiftHours'),
+            slider: document.getElementById('shiftSlider'),
+            minus: document.getElementById('shiftMinus'),
+            plus: document.getElementById('shiftPlus'),
+            reset: document.getElementById('resetShift'),
+            list: document.getElementById('shiftedScheduleList'),
+            add: document.getElementById('addBtn'),
+            import: document.getElementById('importBtn'),
+            chime: document.getElementById('chimeSelect'),
+            testSound: document.getElementById('testChimeBtn'),
+            syncId: document.getElementById('syncIdInput'),
+            genId: document.getElementById('genSyncIdBtn'),
+            load: document.getElementById('loadSyncBtn'),
+            save: document.getElementById('pushSyncBtn'),
+            savedDisplay: document.getElementById('lastSavedDisplay'),
+            loadDisplay: document.getElementById('lastLoadDisplay'),
+            token: document.getElementById('ghTokenInput'),
+            tokenWrapper: document.getElementById('ghTokenWrapper'),
+            status: document.getElementById('syncStatus'),
+            shareBtn: document.getElementById('shareSettingsBtn'),
+            modal: document.getElementById('shareModal'),
+            closeModal: document.getElementById('closeShareModal'),
+            copyBtn: document.getElementById('copyLinkBtn'),
+            copyMsg: document.getElementById('copyMsg'),
+            dynamicTimes: document.querySelectorAll('.dynamic-time'),
+            wakeChecks: [
+                document.getElementById('checkWake0'),
+                document.getElementById('checkWake8'),
+                document.getElementById('checkWake16')
+            ]
+        };
+    }
+
+    _applyLoadedData(data) {
+        if (!data) return;
+        if (this.els.memo) this.els.memo.value = data.memo || "";
+        if (this.els.wake) this.els.wake.value = data.baseWakeupTime || "05:00";
+        if (this.els.chime) this.els.chime.value = data.chimeType || "none";
+        if (this.els.syncId) this.els.syncId.value = this.data.syncId;
+        if (this.els.token) {
+            this.els.token.value = this.data.ghToken;
+            this._updateTokenVisibility();
+        }
+        if (data.wakeChecks) {
+            this.els.wakeChecks.forEach((cb, i) => { if(cb) cb.checked = data.wakeChecks[i]; });
+        }
+        this.els.shift.value = Utils.decimalToOffsetStr(this.data.shiftHours);
+        if (this.els.slider) this.els.slider.value = this.data.shiftHours;
+
+        const ts = this.data.getTimestamps();
+        if (this.els.loadDisplay) this.els.loadDisplay.textContent = `最終更新: ${ts.lastPull || '--:--'}`;
+        if (this.els.savedDisplay) this.els.savedDisplay.textContent = `最終更新: ${ts.lastPush || '--:--'}`;
+        this._updateSyncStatusUI();
+    }
+
+    _addEventListeners() {
+        this.els.add?.addEventListener('click', () => this.addRoutine());
+        this.els.import?.addEventListener('click', () => this.importFromText());
+        this.els.shift?.addEventListener('change', (e) => this._applyShift(Utils.offsetStrToDecimal(e.target.value), 'input'));
+        this.els.slider?.addEventListener('input', (e) => this._applyShift(e.target.value, 'slider'));
+        this.els.minus?.addEventListener('click', () => this._applyShift(this.data.shiftHours - 0.25));
+        this.els.plus?.addEventListener('click', () => this._applyShift(this.data.shiftHours + 0.25));
+        this.els.reset?.addEventListener('click', () => this._applyShift(0));
+        this.els.wake?.addEventListener('change', () => this._handleWakeTimeChange());
+        this.els.memo?.addEventListener('input', () => this._saveAll());
+        this.els.testSound?.addEventListener('click', () => this.audio.play(this.els.chime.value));
+        this.els.chime?.addEventListener('change', () => { this.audio.init(); this._saveAll(); });
+        this.els.wakeChecks.forEach(cb => cb?.addEventListener('change', () => this._saveAll()));
+        this.els.genId?.addEventListener('click', () => this._handleGenId());
+        this.els.load?.addEventListener('click', () => this._handleLoadCloud());
+        this.els.save?.addEventListener('click', () => this._handleSaveCloud());
+        this.els.syncId?.addEventListener('change', () => { this.data.syncId = this.els.syncId.value; this._saveAll(); this._updateSyncStatusUI(); });
+        this.els.token?.addEventListener('change', () => { this.data.ghToken = this.els.token.value; this._saveAll(); this._updateSyncStatusUI(); });
+        this.els.token?.addEventListener('focus', () => { if(this.els.tokenWrapper) this.els.tokenWrapper.style.opacity = "1"; });
+        this.els.token?.addEventListener('blur', () => this._updateTokenVisibility());
+        this.els.shareBtn?.addEventListener('click', () => this._openShareModal());
+        this.els.closeModal?.addEventListener('click', () => this.els.modal.style.display = 'none');
+        this.els.modal?.addEventListener('click', (e) => { if(e.target === this.els.modal) this.els.modal.style.display = 'none'; });
+        this.els.copyBtn?.addEventListener('click', () => this._copyLink());
+        
+        this._checkUrlParams();
+    }
+
+    _startClock() {
+        const update = () => {
+            if (this.chart.chart) this.chart.chart.update();
+            this._checkChime();
+        };
+        const now = new Date();
+        setTimeout(() => { setInterval(update, 60000); update(); }, (60 - now.getSeconds()) * 1000 + 100);
+    }
+
+    _saveAll() {
+        this.data.saveLocal({
+            memo: this.els.memo?.value,
+            baseWakeupTime: this.els.wake?.value,
+            chimeType: this.els.chime?.value,
+            wakeChecks: this.els.wakeChecks.map(cb => cb?.checked)
+        });
+    }
+
+    _renderAll() {
+        this._syncWakeWithSleep();
+        this.chart.render(this.data.routines, this.data.shiftHours);
+        this._updateScheduleList();
+        this._updateCheckboxTimes();
+    }
+
+    _applyShift(val, source = 'other') {
+        let numVal = Math.max(-24, Math.min(24, parseFloat(val) || 0));
+        this.data.shiftHours = numVal;
+        if (source !== 'input') this.els.shift.value = Utils.decimalToOffsetStr(numVal);
+        if (source !== 'slider' && this.els.slider) this.els.slider.value = numVal;
+        this._renderAll();
+        this._saveAll();
+    }
+
+    _handleWakeTimeChange() {
+        const val = this.els.wake.value;
+        const sleep = this.data.routines.find(r => r.name === "睡眠");
+        if (!val || !sleep) return this._renderAll();
+        let newShift = Utils.timeToDecimal(val) - Utils.timeToDecimal(sleep.end);
+        if (newShift > 12) newShift -= 24;
+        if (newShift < -12) newShift += 24;
+        this._applyShift(newShift);
+    }
+
+    _syncWakeWithSleep() {
+        const sleep = this.data.routines.find(r => r.name === "睡眠");
+        if (sleep && this.els.wake) {
+            const newValue = Utils.decimalToHHMM(Utils.normalizeHour(Utils.timeToDecimal(sleep.end) + this.data.shiftHours));
+            if (this.els.wake.value !== newValue) this.els.wake.value = newValue;
+        }
+    }
+
+    _updateScheduleList() {
+        this.els.list.innerHTML = '';
+        const sorted = [...this.data.routines].sort((a, b) => a.start.localeCompare(b.start));
+        sorted.forEach(r => {
+            const s = Utils.normalizeHour(Utils.timeToDecimal(r.start) + this.data.shiftHours);
+            const e = Utils.normalizeHour(Utils.timeToDecimal(r.end) + this.data.shiftHours);
+            const li = document.createElement('li');
+            li.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
+            li.innerHTML = `
+                <div style="display:flex; align-items:center;">
+                    <div style="width:10px; height:10px; background:${r.color}; border-radius:50%; margin-right:8px;"></div>
+                    <span>${Utils.decimalToHHMM(s)} - ${Utils.decimalToHHMM(e)}</span>: <strong>${r.name}</strong>
+                </div>
+                <button class="delete-shifted-btn" onclick="app.deleteRoutine('${r.id}')">×</button>
+            `;
+            this.els.list.appendChild(li);
+        });
+    }
+
+    _updateCheckboxTimes() {
+        const baseDec = Utils.timeToDecimal(this.els.wake.value);
+        this.els.dynamicTimes.forEach(span => {
+            const offset = parseFloat(span.getAttribute('data-offset'));
+            span.textContent = isNaN(baseDec) ? "--:--" : Utils.decimalToHHMM(Utils.normalizeHour(baseDec + offset));
+        });
+    }
+
+    _checkChime() {
+        const type = this.els.chime.value;
+        if (type === 'none' || new Date().getSeconds() !== 0) return;
+        const nowDec = new Date().getHours() + new Date().getMinutes() / 60;
+        const ring = this.data.routines.some(r => {
+            const shiftedEnd = Utils.normalizeHour(Utils.timeToDecimal(r.end) + this.data.shiftHours);
+            return Math.abs(nowDec - shiftedEnd) < 0.001 || Math.abs(nowDec + 24 - shiftedEnd) < 0.001 || Math.abs(nowDec - (shiftedEnd + 24)) < 0.001;
+        });
+        if (ring) this.audio.play(type);
+    }
+
+    addRoutine() {
+        const name = this.els.activity.value, s = this.els.start.value, e = this.els.end.value;
+        if (!name || !s || !e) return alert('入力してください');
+        const rev = (t) => Utils.decimalToHHMM(Utils.normalizeHour(Utils.timeToDecimal(t) - this.data.shiftHours));
+        this.data.routines.push({ id: Date.now(), name, start: rev(s), end: rev(e), color: CONFIG.COLORS[this.data.routines.length % CONFIG.COLORS.length] });
+        this.els.activity.value = ''; this._renderAll(); this._saveAll();
+    }
+
+    deleteRoutine(id) {
+        this.data.routines = this.data.routines.filter(r => String(r.id) !== String(id));
+        this._renderAll(); this._saveAll();
+    }
+
+    importFromText() {
+        const text = this.els.bulk.value.trim();
+        if (!text || !confirm('既存のデータは上書きされます。よろしいですか？')) return;
+        this._applyShift(0);
+        const newRoutines = [], regA = /(.+?)\s+(\d{1,2}:\d{2})\s*[-~]\s*(\d{1,2}:\d{2})/, regB = /(\d{1,2}:\d{2})\s*[-~]\s*(\d{1,2}:\d{2})\s*[:]\s*(.+)/;
+        text.split('\n').forEach(line => {
+            const str = line.trim(); if (!str) return;
+            let m = str.match(regB) || str.match(regA);
+            if (m) {
+                const isB = !!str.match(regB);
+                newRoutines.push({ id: Date.now() + Math.random(), name: (isB ? m[3] : m[1]).trim(), start: (isB ? m[1] : m[2]).padStart(5, '0'), end: (isB ? m[2] : m[3]).padStart(5, '0'), color: CONFIG.COLORS[newRoutines.length % CONFIG.COLORS.length] });
+            }
+        });
+        if (newRoutines.length === 0) return alert('不備があります');
+        this.data.routines = newRoutines; this.els.bulk.value = ''; this._renderAll(); this._saveAll();
+    }
+
+    _handleGenId() {
+        const id = this.data.generateSyncId();
+        this.els.syncId.value = id; this.data.syncId = id; this._saveAll();
+    }
+
+    async _handleSaveCloud() {
+        if (!this.els.token.value || !this.els.syncId.value) return alert("入力不足です");
+        try {
+            const time = await this.data.saveToCloud();
+            this.els.savedDisplay.textContent = `最終更新: ${time}`;
+        } catch (e) { alert(e.message); }
+    }
+
+    async _handleLoadCloud() {
+        if (!this.els.token.value || !this.els.syncId.value) return alert("入力不足です");
+        if (!confirm("データを読み込みますか？")) return;
+        try {
+            const res = await this.data.loadFromCloud();
+            this._applyLoadedData(res.data); this._renderAll();
+            this.els.loadDisplay.textContent = `最終更新: ${res.time}`;
+        } catch (e) { alert(e.message); }
+    }
+
+    _updateSyncStatusUI() {
+        const active = !!(this.data.syncId && this.data.ghToken);
+        this.els.status.className = `sync-status sync-status-dot ${active ? 'active' : 'inactive'}`;
+        this.els.status.style.color = active ? '#03DAC6' : '#555';
+    }
+
+    _updateTokenVisibility() {
+        const hasVal = !!this.els.token.value;
+        if (this.els.tokenWrapper) this.els.tokenWrapper.style.opacity = hasVal ? "0.4" : "0.75";
+        this.els.token.style.color = hasVal ? "rgba(255,255,255,0.4)" : "white";
+    }
+
+    _openShareModal() {
+        if (!this.data.syncId || !this.data.ghToken) return alert("IDとトークンが必要です");
+        const url = new URL(window.location.href);
+        url.searchParams.set('id', this.data.syncId); url.searchParams.set('token', this.data.ghToken);
+        this.els.modal.style.display = 'flex'; this.els.copyMsg.textContent = "";
+        const qrEl = document.getElementById('qrcode'); qrEl.innerHTML = "";
+        new QRCode(qrEl, { text: url.toString(), width: 180, height: 180 });
+        this.currentShareUrl = url.toString();
+    }
+
+    _copyLink() {
+        navigator.clipboard.writeText(this.currentShareUrl).then(() => {
+            this.els.copyMsg.textContent = "コピーしました！";
+            setTimeout(() => this.els.copyMsg.textContent = "", 3000);
+        });
+    }
+
+    _checkUrlParams() {
+        const p = new URLSearchParams(window.location.search);
+        const id = p.get('id'), token = p.get('token');
+        if (id && token) {
+            window.history.replaceState({}, '', window.location.pathname);
+            this.data.syncId = id; this.data.ghToken = token;
+            this.els.syncId.value = id; this.els.token.value = token;
+            this._updateTokenVisibility(); this._saveAll();
+            if (confirm(`ID: ${id} のデータを読み込みますか？`)) this._handleLoadCloud();
+        }
+    }
+}
+
+// Start App
 const app = new RoutineApp();
-window.app = app; // Explicitly expose to global scope for HTML onclick handlers
+window.app = app;
