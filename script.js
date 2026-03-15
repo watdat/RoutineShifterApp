@@ -5,15 +5,33 @@ Chart.register(ChartDataLabels);
  * Constants & Utilities
  */
 const CONFIG = {
-    COLORS: [
-        '#BB86FC', '#03DAC6', '#CF6679', '#FFB74D', '#4FC3F7',
-        '#AED581', '#FFD54F', '#90CAF9', '#F48FB1', '#80CBC4'
-    ],
+    THEMES: {
+        modern_british: {
+            name: 'Modern British',
+            colors: ['#34495E', '#7F8C8D', '#5D6D7E', '#4A235A', '#1B4F72', '#2E4053', '#212F3D', '#546E7A']
+        },
+        heritage_woods: {
+            name: 'Heritage Woods',
+            colors: ['#4E342E', '#33691E', '#5D4037', '#3E4E50', '#BF360C', '#424242', '#5D4632', '#2E3B3E']
+        },
+        titanium_precision: {
+            name: 'Titanium Precision',
+            colors: ['#424242', '#37474F', '#455A64', '#283747', '#515A5A', '#78909C', '#546E7A', '#455A64']
+        },
+        midnight_luxury: {
+            name: 'Midnight Luxury',
+            colors: ['#212121', '#C5A059', '#E0E0E0', '#424242', '#B8860B', '#757575', '#3C3C3C', '#D4AF37']
+        },
+        racing_heritage: {
+            name: 'Racing Heritage',
+            colors: ['#3B3B3B', '#800020', '#004225', '#4A412A', '#2F4F4F', '#5E0B15', '#013220', '#424242']
+        }
+    },
     STORAGE_KEYS: {
         DATA: 'routineData',
         TOKEN: 'rs_gh_token',
         TIMESTAMPS: 'rs_sync_timestamps',
-        GIST_ID_PREFIX: 'rs_gist_id_'
+        COLOR_THEME: 'routineColorTheme'
     }
 };
 
@@ -89,6 +107,14 @@ class DataManager {
         if (this.ghToken) {
             localStorage.setItem(CONFIG.STORAGE_KEYS.TOKEN, this.ghToken);
         }
+    }
+
+    saveColorTheme(themeId) {
+        localStorage.setItem(CONFIG.STORAGE_KEYS.COLOR_THEME, themeId);
+    }
+
+    loadColorTheme() {
+        return localStorage.getItem(CONFIG.STORAGE_KEYS.COLOR_THEME) || 'modern_british';
     }
 
     loadLocal() {
@@ -233,6 +259,11 @@ class ChartManager {
         this.ctx = document.getElementById(canvasId).getContext('2d');
         this.app = app;
         this.chart = null;
+        this.colors = [];
+    }
+
+    updateColors(newColors) {
+        this.colors = newColors;
     }
 
     render(routines, shiftHours) {
@@ -374,8 +405,9 @@ class ChartManager {
     }
 
     _getSegmentGradient(ctx, colors) {
-        const { chart, dataIndex, chartArea } = ctx;
+        const { chart, dataIndex } = ctx;
         const color = colors[dataIndex];
+        const chartArea = chart.chartArea;
         if (!color || color.startsWith('rgba') || !chartArea) return color;
         const cX = (chartArea.left + chartArea.right) / 2;
         const cY = (chartArea.top + chartArea.bottom) / 2;
@@ -443,6 +475,10 @@ class RoutineApp {
     }
 
     init() {
+        this.currentThemeId = this.data.loadColorTheme();
+        this.currentColors = CONFIG.THEMES[this.currentThemeId].colors;
+        this.chart.updateColors(this.currentColors);
+
         this._initElements();
         const savedData = this.data.loadLocal();
         this._applyLoadedData(savedData);
@@ -453,6 +489,7 @@ class RoutineApp {
 
     _initElements() {
         this.els = {
+            themeSelect: document.getElementById('themeSelect'),
             activity: document.getElementById('activityName'),
             start: document.getElementById('startTime'),
             end: document.getElementById('endTime'),
@@ -493,6 +530,7 @@ class RoutineApp {
     }
 
     _applyLoadedData(data) {
+        if (this.els.themeSelect) this.els.themeSelect.value = this.currentThemeId;
         if (!data) return;
         if (this.els.memo) this.els.memo.value = data.memo || "";
         if (this.els.wake) this.els.wake.value = data.baseWakeupTime || "05:00";
@@ -515,6 +553,21 @@ class RoutineApp {
     }
 
     _addEventListeners() {
+        this.els.themeSelect?.addEventListener('change', (e) => {
+            this.currentThemeId = e.target.value;
+            const newTheme = CONFIG.THEMES[this.currentThemeId];
+            this.currentColors = newTheme.colors;
+            
+            // Update colors for all existing routines
+            this.data.routines.forEach((r, i) => {
+                r.color = this.currentColors[i % this.currentColors.length];
+            });
+
+            this.data.saveColorTheme(this.currentThemeId);
+            this.chart.updateColors(this.currentColors);
+            this._renderAll();
+            this._saveAll();
+        });
         this.els.add?.addEventListener('click', () => this.addRoutine());
         this.els.import?.addEventListener('click', () => this.importFromText());
         this.els.shift?.addEventListener('change', (e) => this._applyShift(Utils.offsetStrToDecimal(e.target.value), 'input'));
@@ -636,7 +689,7 @@ class RoutineApp {
         const name = this.els.activity.value, s = this.els.start.value, e = this.els.end.value;
         if (!name || !s || !e) return alert('入力してください');
         const rev = (t) => Utils.decimalToHHMM(Utils.normalizeHour(Utils.timeToDecimal(t) - this.data.shiftHours));
-        this.data.routines.push({ id: Date.now(), name, start: rev(s), end: rev(e), color: CONFIG.COLORS[this.data.routines.length % CONFIG.COLORS.length] });
+        this.data.routines.push({ id: Date.now(), name, start: rev(s), end: rev(e), color: this.currentColors[this.data.routines.length % this.currentColors.length] });
         this.els.activity.value = ''; this._renderAll(); this._saveAll();
     }
 
@@ -655,7 +708,7 @@ class RoutineApp {
             let m = str.match(regB) || str.match(regA);
             if (m) {
                 const isB = !!str.match(regB);
-                newRoutines.push({ id: Date.now() + Math.random(), name: (isB ? m[3] : m[1]).trim(), start: (isB ? m[1] : m[2]).padStart(5, '0'), end: (isB ? m[2] : m[3]).padStart(5, '0'), color: CONFIG.COLORS[newRoutines.length % CONFIG.COLORS.length] });
+                newRoutines.push({ id: Date.now() + Math.random(), name: (isB ? m[3] : m[1]).trim(), start: (isB ? m[1] : m[2]).padStart(5, '0'), end: (isB ? m[2] : m[3]).padStart(5, '0'), color: this.currentColors[newRoutines.length % this.currentColors.length] });
             }
         });
         if (newRoutines.length === 0) return alert('不備があります');
