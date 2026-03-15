@@ -291,7 +291,36 @@ p {
     align-items: center;
     justify-content: center;
     padding: 0rem;
+    position: relative;
     /* Reverted to baseline for outside clock numbers */
+}
+
+/* --- Theme Selector --- */
+.theme-select {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--secondary-color);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    outline: none;
+    backdrop-filter: blur(5px);
+    transition: all 0.2s ease;
+}
+
+.theme-select:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.theme-select option {
+    background: #1e1e1e;
+    color: #fff;
 }
 
 .input-area {
@@ -905,33 +934,3 @@ input.sync-id-input {
     margin-top: 0.5rem;
 }
 
-/* --- Theme Switcher Custom Styles --- */
-.chart-area {
-    position: relative !important;
-}
-
-.theme-select {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    z-index: 100;
-    background: rgba(0, 0, 0, 0.4);
-    color: var(--secondary-color);
-    border: 1px solid var(--panel-border);
-    border-radius: 6px;
-    padding: 2px 8px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    outline: none;
-    backdrop-filter: blur(5px);
-    transition: background 0.2s;
-}
-
-.theme-select:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.theme-select option {
-    background: #1e1e1e;
-    color: #fff;
-}

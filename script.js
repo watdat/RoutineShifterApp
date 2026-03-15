@@ -20,11 +20,11 @@ const CONFIG = {
         },
         midnight_luxury: {
             name: 'Midnight Luxury',
-            colors: ['#212121', '#C5A059', '#E0E0E0', '#424242', '#B8860B', '#757575', '#3C3C3C', '#D4AF37']
+            colors: ['#58434bf9', '#C5A059', '#E0E0E0', '#424242', '#B8860B', '#8f8d8dff', '#473a63ff', '#D4AF37']
         },
         racing_heritage: {
             name: 'Racing Heritage',
-            colors: ['#3B3B3B', '#800020', '#004225', '#4A412A', '#2F4F4F', '#5E0B15', '#013220', '#424242']
+            colors: ['#425068ff', '#800020', '#004225', '#4A412A', '#2F4F4F', '#5E0B15', '#013220', '#767575ff']
         }
     },
     STORAGE_KEYS: {
@@ -183,7 +183,7 @@ class DataManager {
         const gistsResp = await this.githubFetch("https://api.github.com/gists");
         const gists = await gistsResp.json();
         const matches = gists.filter(g => Object.keys(g.files).some(key => key.normalize() === filename.normalize()));
-        
+
         if (matches.length > 0) {
             matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
         }
@@ -417,8 +417,8 @@ class ChartManager {
             const res = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return res ? `rgba(${parseInt(res[1], 16)}, ${parseInt(res[2], 16)}, ${parseInt(res[3], 16)}, ${a})` : hex;
         };
-        grad.addColorStop(0.5, hexToRgba(color, 0.4));
-        grad.addColorStop(1, hexToRgba(color, 1));
+        grad.addColorStop(0.8, hexToRgba(color, 0.7));
+        grad.addColorStop(0.6, hexToRgba(color, 1));
         return grad;
     }
 }
@@ -454,7 +454,7 @@ class AudioManager {
             osc.stop(now + delay + decay + 0.1);
         };
 
-        switch(type) {
+        switch (type) {
             case 'bell': playOsc(880, 'sine', 0.1, 1.5, 0); playOsc(1760, 'sine', 0.05, 1.0, 0); break;
             case 'ding': playOsc(1200, 'triangle', 0.1, 0.5, 0); break;
             case 'marimba': playOsc(523, 'sine', 0.15, 0.3, 0); playOsc(659, 'sine', 0.15, 0.3, 0.15); playOsc(784, 'sine', 0.15, 0.3, 0.3); break;
@@ -541,7 +541,7 @@ class RoutineApp {
             this._updateTokenVisibility();
         }
         if (data.wakeChecks) {
-            this.els.wakeChecks.forEach((cb, i) => { if(cb) cb.checked = data.wakeChecks[i]; });
+            this.els.wakeChecks.forEach((cb, i) => { if (cb) cb.checked = data.wakeChecks[i]; });
         }
         this.els.shift.value = Utils.decimalToOffsetStr(this.data.shiftHours);
         if (this.els.slider) this.els.slider.value = this.data.shiftHours;
@@ -553,19 +553,6 @@ class RoutineApp {
     }
 
     _addEventListeners() {
-        this.els.themeSelect?.addEventListener('change', (e) => {
-            this.currentThemeId = e.target.value;
-            const newTheme = CONFIG.THEMES[this.currentThemeId];
-            this.currentColors = newTheme.colors;
-            
-            // Update colors for all existing routines
-            this.data.routines.forEach((r, i) => {
-                r.color = this.currentColors[i % this.currentColors.length];
-            });
-
-            this.data.saveColorTheme(this.currentThemeId);
-            this.chart.updateColors(this.currentColors);
-            this._renderAll();
             this._saveAll();
         });
         this.els.add?.addEventListener('click', () => this.addRoutine());
@@ -585,13 +572,13 @@ class RoutineApp {
         this.els.save?.addEventListener('click', () => this._handleSaveCloud());
         this.els.syncId?.addEventListener('change', () => { this.data.syncId = this.els.syncId.value; this._saveAll(); this._updateSyncStatusUI(); });
         this.els.token?.addEventListener('change', () => { this.data.ghToken = this.els.token.value; this._saveAll(); this._updateSyncStatusUI(); });
-        this.els.token?.addEventListener('focus', () => { if(this.els.tokenWrapper) this.els.tokenWrapper.style.opacity = "1"; });
+        this.els.token?.addEventListener('focus', () => { if (this.els.tokenWrapper) this.els.tokenWrapper.style.opacity = "1"; });
         this.els.token?.addEventListener('blur', () => this._updateTokenVisibility());
         this.els.shareBtn?.addEventListener('click', () => this._openShareModal());
         this.els.closeModal?.addEventListener('click', () => this.els.modal.style.display = 'none');
-        this.els.modal?.addEventListener('click', (e) => { if(e.target === this.els.modal) this.els.modal.style.display = 'none'; });
+        this.els.modal?.addEventListener('click', (e) => { if (e.target === this.els.modal) this.els.modal.style.display = 'none'; });
         this.els.copyBtn?.addEventListener('click', () => this._copyLink());
-        
+
         this._checkUrlParams();
     }
 
