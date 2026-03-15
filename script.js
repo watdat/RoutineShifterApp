@@ -140,9 +140,8 @@ class RoutineApp {
 
         // Settings / Customization
         if (this.baseWakeupTimeInput) {
-            this.baseWakeupTimeInput.addEventListener('input', () => {
-                this._updateCheckboxTimes();
-                this._saveData();
+            this.baseWakeupTimeInput.addEventListener('change', () => {
+                this._handleWakeTimeChange();
             });
         }
         if (this.memoInput) {
@@ -700,10 +699,42 @@ class RoutineApp {
         if (sleepRoutine) {
             const baseEnd = this._timeToDecimal(sleepRoutine.end);
             const shiftedEnd = this._normalizeHour(baseEnd + this.shiftHours);
-            this.baseWakeupTimeInput.value = this._decimalToHHMM(shiftedEnd);
-        } else {
-            this.baseWakeupTimeInput.value = "";
+            const newValue = this._decimalToHHMM(shiftedEnd);
+            // Only update if value is different to avoid cursor jump/recursion issues if any
+            if (this.baseWakeupTimeInput.value !== newValue) {
+                this.baseWakeupTimeInput.value = newValue;
+            }
         }
+    }
+
+    /**
+     * Handles manual change of Wake time input
+     */
+    _handleWakeTimeChange() {
+        if (!this.baseWakeupTimeInput) return;
+
+        const val = this.baseWakeupTimeInput.value;
+        if (!val) return;
+
+        const sleepRoutine = this.routines.find(r => r.name === "睡眠");
+        if (!sleepRoutine) {
+            console.warn("Routine '睡眠' not found. Cannot sync wake time.");
+            this._updateCheckboxTimes();
+            this._saveData();
+            return;
+        }
+
+        const targetDec = this._timeToDecimal(val);
+        const baseEndDec = this._timeToDecimal(sleepRoutine.end);
+
+        // Calculate shift needed to align base sleep end with target wake time
+        let newShift = targetDec - baseEndDec;
+
+        // Keep shift within -24 to 24 range and pick shortest path if possible
+        if (newShift > 12) newShift -= 24;
+        if (newShift < -12) newShift += 24;
+
+        this._applyShift(newShift);
     }
 
     // ==========================================
