@@ -532,9 +532,19 @@ class RoutineApp {
 
     _applyLoadedData(data) {
         if (this.els.themeSelect) this.els.themeSelect.value = this.currentThemeId;
-        if (!data) return;
+        if (!data) {
+            // Setup defaults for first-time users
+            this._setDefaults();
+            return;
+        }
+        
+        // Sync color theme if provided in cloud data
+        if (data.colorTheme && data.colorTheme !== this.currentThemeId) {
+            this._handleThemeChange(data.colorTheme, false); // Don't re-save yet
+        }
+
         if (this.els.memo) this.els.memo.value = data.memo || "";
-        if (this.els.wake) this.els.wake.value = data.baseWakeupTime || "05:00";
+        if (this.els.wake) this.els.wake.value = data.baseWakeupTime || "06:00";
         if (this.els.chime) this.els.chime.value = data.chimeType || "none";
         if (this.els.syncId) this.els.syncId.value = this.data.syncId;
         if (this.els.token) {
@@ -544,6 +554,11 @@ class RoutineApp {
         if (data.wakeChecks) {
             this.els.wakeChecks.forEach((cb, i) => { if (cb) cb.checked = data.wakeChecks[i]; });
         }
+        
+        // Important: Update internal state from loaded data
+        this.data.routines = data.routines || [];
+        this.data.shiftHours = data.shiftHours || 0;
+
         this.els.shift.value = Utils.decimalToOffsetStr(this.data.shiftHours);
         if (this.els.slider) this.els.slider.value = this.data.shiftHours;
 
@@ -596,8 +611,20 @@ class RoutineApp {
             memo: this.els.memo?.value,
             baseWakeupTime: this.els.wake?.value,
             chimeType: this.els.chime?.value,
-            wakeChecks: this.els.wakeChecks.map(cb => cb?.checked)
+            wakeChecks: this.els.wakeChecks.map(cb => cb?.checked),
+            colorTheme: this.currentThemeId
         });
+    }
+
+    _setDefaults() {
+        this.data.routines = [
+            { id: 'def1', name: '午前の活動', start: '09:00', end: '12:00', color: this.currentColors[0] },
+            { id: 'def2', name: '午後の活動', start: '13:00', end: '17:00', color: this.currentColors[1] },
+            { id: 'def3', name: '夜の余暇', start: '18:00', end: '21:00', color: this.currentColors[2] },
+            { id: 'def4', name: '睡眠', start: '22:00', end: '06:00', color: this.currentColors[3] }
+        ];
+        if (this.els.wake) this.els.wake.value = "06:00";
+        this._saveAll();
     }
 
     _renderAll() {
@@ -715,9 +742,9 @@ class RoutineApp {
         } catch (e) { alert(e.message); }
     }
 
-    async _handleLoadCloud() {
+    async _handleLoadCloud(skipConfirm = false) {
         if (!this.els.token.value || !this.els.syncId.value) return alert("入力不足です");
-        if (!confirm("データを読み込みますか？")) return;
+        if (!skipConfirm && !confirm("データを読み込みますか？")) return;
         try {
             const res = await this.data.loadFromCloud();
             this._applyLoadedData(res.data); this._renderAll();
@@ -754,10 +781,11 @@ class RoutineApp {
         });
     }
 
-    _handleThemeChange(themeId) {
+    _handleThemeChange(themeId, doSave = true) {
         this.currentThemeId = themeId;
         const newTheme = CONFIG.THEMES[this.currentThemeId];
         this.currentColors = newTheme.colors;
+        if (this.els.themeSelect) this.els.themeSelect.value = this.currentThemeId;
         
         // Update colors for all existing routines
         this.data.routines.forEach((r, i) => {
@@ -767,7 +795,7 @@ class RoutineApp {
         this.data.saveColorTheme(this.currentThemeId);
         this.chart.updateColors(this.currentColors);
         this._renderAll();
-        this._saveAll();
+        if (doSave) this._saveAll();
     }
 
     _checkUrlParams() {
@@ -778,7 +806,10 @@ class RoutineApp {
             this.data.syncId = id; this.data.ghToken = token;
             this.els.syncId.value = id; this.els.token.value = token;
             this._updateTokenVisibility(); this._saveAll();
-            if (confirm(`ID: ${id} のデータを読み込みますか？`)) this._handleLoadCloud();
+            // Automatically ask to load data only once
+            if (confirm(`共有リンクを検知しました。\r\nID: ${id} のデータを読み込みますか？`)) {
+                this._handleLoadCloud(true); // skip confirmation dialog
+            }
         }
     }
 }

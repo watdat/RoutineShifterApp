@@ -8,7 +8,9 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Quicksand:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Quicksand:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
@@ -42,7 +44,8 @@
                                 <button id="testChimeBtn" class="btn-secondary">Sound Test</button>
                             </div>
                         </div>
-                        <textarea id="memoInput" class="memo-area" placeholder="(Todoやちょっとしたメモなど、ここに置いておくことができます)"></textarea>
+                        <textarea id="memoInput" class="memo-area"
+                            placeholder="(Todoやちょっとしたメモなど、ここに置いておくことができます)"></textarea>
                     </div>
 
                     <!-- Checkbox Row -->
@@ -51,13 +54,16 @@
                             Wake: <input type="time" id="baseWakeupTime" value="05:00">
                         </label>
                         <label class="checkbox-item">
-                            <input type="checkbox" id="checkWake0"> Wake+0h (<span class="dynamic-time" data-offset="0">05:00</span>)
+                            <input type="checkbox" id="checkWake0"> Wake+0h (<span class="dynamic-time"
+                                data-offset="0">05:00</span>)
                         </label>
                         <label class="checkbox-item">
-                            <input type="checkbox" id="checkWake8"> Wake+8h (<span class="dynamic-time" data-offset="8">13:00</span>)
+                            <input type="checkbox" id="checkWake8"> Wake+8h (<span class="dynamic-time"
+                                data-offset="8">13:00</span>)
                         </label>
                         <label class="checkbox-item">
-                            <input type="checkbox" id="checkWake16"> Wake+16h (<span class="dynamic-time" data-offset="16">21:00</span>)
+                            <input type="checkbox" id="checkWake16"> Wake+16h (<span class="dynamic-time"
+                                data-offset="16">21:00</span>)
                         </label>
                     </div>
                 </header>
@@ -95,7 +101,8 @@
                             <div class="shift-display-box">
                                 <input type="text" id="shiftHours" class="shift-display-input" value="+00:00" readonly>
                             </div>
-                            <input type="range" id="shiftSlider" class="shift-range" value="0" min="-24" max="24" step="0.25">
+                            <input type="range" id="shiftSlider" class="shift-range" value="0" min="-24" max="24"
+                                step="0.25">
                         </div>
                     </div>
                 </section>
@@ -114,7 +121,7 @@
         <!-- Main Content: Inputs -->
         <main class="main-content">
             <div class="input-area">
-                
+
                 <!-- Individual Settings -->
                 <section class="individual-settings glass-panel">
                     <h2>ルーティン個別設定</h2>
@@ -139,16 +146,17 @@
 睡眠 22:00-05:00
 仕事 09:00 - 17:00"></textarea>
                         <button id="importBtn" class="btn-primary">テキストから読み込む</button>
-                        <p class="import-note">※既存のルーティンは上書きされます</p>
+                        <p class="sync-note">※既存のルーティンは上書きされます</p>
                     </div>
                 </section>
-                
+
                 <section class="sync-section glass-panel">
                     <div class="sync-header">
                         <h2>IDデータ読み書き</h2>
                         <div class="sync-token-area">
                             <div id="ghTokenWrapper" class="gh-token-wrapper">
-                                <input type="password" id="ghTokenInput" class="gh-token-input" placeholder="Token">
+                                <input type="password" id="ghTokenInput" class="gh-token-input"
+                                    placeholder="Token未設定:開発者へ依頼ください）">
                             </div>
                             <button id="shareSettingsBtn" class="btn-share" title="設定をスマホへ転送">📲</button>
                         </div>
@@ -158,7 +166,8 @@
                         <!-- Row 1: ID Input -->
                         <div class="sync-id-row">
                             <span id="syncStatus" class="sync-status inactive sync-status-dot" title="同期オフ">●</span>
-                            <input type="text" id="syncIdInput" class="sync-id-input" placeholder="ID (例: ひかるほし)">
+                            <input type="text" id="syncIdInput" class="sync-id-input" placeholder="ID例：ひかるほし">
+                            <p class="sync-note">※Token設定後、保存・読込できるようになります</p>
                         </div>
 
                         <!-- Row 2: Save - NewID - Load -->

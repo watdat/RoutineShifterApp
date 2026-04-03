@@ -77,16 +77,19 @@
     <div class="manual-container">
         <a href="index.html" class="back-link">← アプリに戻る</a>
 
-        <header class="glass-panel" style="text-align: center; margin-bottom: 2rem;">
-            <h1>使い方ガイド</h1>
-            <p>Daily Routine Shifter の活用方法</p>
-        </header>
+        <section class="glass-panel manual-section" style="padding-top: 2rem;">
+            <div
+                style="text-align: center; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1.5rem;">
+                <h1 style="margin-bottom: 0.5rem;">使い方ガイド</h1>
+                <p style="opacity: 1.0;">Daily Routine Shifter の活用方法</p>
+            </div>
 
-        <section class="glass-panel manual-section">
             <h2>どんなアプリ？</h2>
-            <p>1日のスケジュールを可視化し、「もし活動時間を〇時間ずらしたらどうなる？」をシミュレーションできるアプリです。<br>
-                ・起きる時間が違っても、いつも通りのルーティーンを過ごしたいあなたをサポート。<br>・海外旅行の時差ボケ調整や、夜勤・早朝勤務の生活リズム検討にも便利です。
-            </p>
+            <p style="font-size: 0.9rem;">1日のスケジュールを可視化し、「もし活動を〇時間ずらしたらどうなる？」をシミュレーションできるアプリです。</p>
+
+            <p style="font-size: 0.8rem;">・起きる時間が違っても、いつも通りのルーティーンを過ごしたいあなたをサポート。<br>
+                ・海外旅行の時差ボケ調整や、夜勤・早朝勤務の生活リズム検討にも便利です。</p>
+
         </section>
 
         <section class="glass-panel manual-section">
@@ -107,20 +110,23 @@
 
             <h3>3. 時間をずらす（シフト機能）</h3>
             <p>これがこのアプリのメイン機能！</p>
-            <ul class="step-list">
-                <li>画面左（スマホでは上部）の「時間をずらす」スライダー又は「＋」「－」ボタンを操作します。</li>
-                <li><strong>ドーナツ円グラフが回転</strong>し、スケジュール全体が指定した時間分だけずれます。</li>
-                <li>「もし3時間早起きしたら、今の時間は何をしている？」のシミュレーションが瞬時に行えます。</li>
-            </ul>
+            <ol style="padding-left: 1.5rem; color: #ddd; line-height: 1.6;">
+                <li style="margin-bottom: 0.5rem;">画面左（スマホでは上部）の「時間をずらす」スライダー又は「＋」「－」ボタンを操作します。</li>
+                <li style="margin-bottom: 0.5rem;"><strong>ドーナツ円グラフが回転</strong>し、スケジュール全体が指定した時間分だけずれます。</li>
+                <li style="margin-bottom: 0.5rem;">「もし3時間早起きしたら、今の時間は何をしている？」のシミュレーションが瞬時に行えます。</li>
+            </ol>
         </section>
 
         <section class="glass-panel manual-section">
             <h2>便利な機能</h2>
 
             <h3>自動保存機能</h3>
-            <p>登録したルーティンやシフト時間は、ブラウザに自動的に保存されます。<br>
-                ページを閉じても、次回開いたときに続きから使えます。<br>
-                <span style="font-size: 0.9rem; opacity: 0.8;">（※保存をリセットしたい時には「リセット」ボタンを押下してください）</span>
+            <ul class="step-list">
+                <li>登録したルーティンやシフト時間は、ブラウザに自動的に保存されます。</li>
+                <li>ページを閉じても、次回開いたときに続きから使えます。</li>
+            </ul>
+            <p style="font-size: 0.9rem; opacity: 0.8; margin-top: -0.5rem; margin-left: 2rem;">
+                （※保存をリセットしたい時には「リセット」ボタンを押下してください）
             </p>
 
             <h3>ルーティン終了チャイム</h3>
@@ -144,18 +150,14 @@
                 夜の余暇 18:00-20:00<br>
                 睡眠 21:00-05:00<br>
             </div>
-
-            <h3>GitHubトークン再発行・設定手順</h3>
-            <ol style="padding-left: 1.5rem; color: #aaa; font-size: 0.9rem;">
-                <li style="margin-bottom: 0.5rem;">
-                    <strong>GitHubでの再発行:</strong> <a href="https://github.com/settings/tokens" target="_blank"
-                        style="color: var(--secondary-color);">設定ページ</a>を開く → 「Generate new token (classic)」を選択 →
-                    名前を入力・期限を「No expiration」に設定 → <strong>gist</strong> に ✔ を入れて発行 → 文字列をコピー。
-                </li>
-                <li style="margin-bottom: 0.5rem;"><strong>アプリへの設定:</strong> アプリ右上の「Token」欄に貼り付ける。</li>
-                <li style="margin-bottom: 0.5rem;"><strong>他デバイスへの同期:</strong> 「📲」アイコンから発行されたURLを別ブラウザで開く →
-                    トークンも自動同期される。</li>
+            <h3>IDデータ同期（他デバイスで使う）</h3>
+            <p>別の端末でアプリを開きたいときは、以下の手順で行います。</p>
+            <ol style="padding-left: 1.5rem; color: #ddd; line-height: 1.6;">
+                <li style="margin-bottom: 0.5rem;">「新規ID作成」で、自分専用のIDを発行。</li>
+                <li style="margin-bottom: 0.5rem;">「保存」で、現在のデータをクラウドへアップ。</li>
+                <li style="margin-bottom: 0.5rem;">「📲」アイコンから発行した共有リンクを、別端末で開けば設定完了。</li>
             </ol>
+
         </section>
 
         <footer style="text-align: center; margin-top: 3rem; color: #666; font-size: 0.8rem;">
