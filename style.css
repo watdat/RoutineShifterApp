@@ -20,7 +20,6 @@ body {
     min-height: 100vh;
     background-image: radial-gradient(circle at top right, #1f1f1f 0%, #121212 100%);
     overflow-x: hidden;
-    /* Hide scrollbar for body */
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
@@ -40,7 +39,6 @@ html {
 /* --- 全体レイアウト (グリッド構成) --- */
 .app-layout {
     display: grid;
-    /* 50% Sidebar, 50% Main Content */
     grid-template-columns: 1fr 1fr;
     min-height: 100vh;
     gap: 1.5rem;
@@ -112,7 +110,6 @@ h1 {
     margin: 0;
     font-weight: bold;
     font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    /* Prevent layout jump by giving title a bit of space */
     min-height: 1.8rem;
     display: block;
 }
@@ -500,7 +497,18 @@ button:active {
     transform: scale(1.2);
 }
 
-/* --- クラウド同期UI --- */
+/* --- クラウド同期UI (Refactored) --- */
+.sync-section {
+    padding: 1.2rem;
+}
+
+.sync-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
 .sync-status {
     font-size: 1rem;
     margin-right: 5px;
@@ -514,57 +522,6 @@ button:active {
 
 .sync-status.inactive {
     color: #555;
-}
-
-/* --- レスポンシブ対応 (スマホ向けレイアウト) --- */
-@media (max-width: 900px) {
-    .app-layout {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        padding: 1rem;
-        gap: 1.5rem;
-    }
-
-    .sidebar {
-        height: auto;
-        position: relative;
-        top: 0;
-        border-bottom: 1px solid var(--panel-border);
-        padding-bottom: 1.5rem;
-        width: 100%;
-        box-sizing: border-box;
-    }
-
-    .main-content {
-        width: 100%;
-        box-sizing: border-box;
-    }
-
-    .list-section {
-        max-height: 400px;
-    }
-
-    .input-area {
-        grid-template-columns: 1fr;
-    }
-
-    .glass-panel {
-        width: 100%;
-        box-sizing: border-box;
-    }
-}
-
-/* --- クラウド同期UI (Refactored) --- */
-.sync-section {
-    padding: 1.2rem;
-}
-
-.sync-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
 }
 
 .sync-header h2 {
@@ -781,6 +738,7 @@ input.sync-id-input {
 
 .btn-shift-tall:hover {
     background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .shift-value-group {
@@ -888,4 +846,43 @@ input.sync-id-input {
     color: var(--secondary-color);
     font-size: 0.8rem;
     margin-top: 0.5rem;
+}
+
+/* --- レスポンシブ対応 (スマホ向けレイアウト) --- */
+@media (max-width: 900px) {
+    .app-layout {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1rem;
+        gap: 1.5rem;
+    }
+
+    .sidebar {
+        height: auto;
+        position: relative;
+        top: 0;
+        border-bottom: 1px solid var(--panel-border);
+        padding-bottom: 1.5rem;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .main-content {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .list-section {
+        max-height: 400px;
+    }
+
+    .input-area {
+        grid-template-columns: 1fr;
+    }
+
+    .glass-panel {
+        width: 100%;
+        box-sizing: border-box;
+    }
 }

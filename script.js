@@ -163,11 +163,6 @@ class DataManager {
             finalUrl += (url.includes('?') ? '&' : '?') + `t=${Date.now()}`;
         }
         const resp = await fetch(finalUrl, { ...options, headers });
-        if (resp.status === 401) throw new Error("GitHubトークンが無効、または有効期限切れです");
-        if (!resp.ok) {
-            const errData = await resp.json().catch(() => ({}));
-            throw new Error(`Status: ${resp.status} - ${errData.message || '不明なエラー'}`);
-        }
         return resp;
     }
 
@@ -190,10 +185,10 @@ class DataManager {
         }
 
         let targetGistId = (matches.length > 0) ? matches[0].id : null;
-        let resp;
+        let response;
 
         if (targetGistId) {
-            resp = await this.githubFetch(`https://api.github.com/gists/${targetGistId}`, {
+            response = await this.githubFetch(`https://api.github.com/gists/${targetGistId}`, {
                 method: 'PATCH',
                 body: JSON.stringify({
                     description: `RoutineShifter Sync: ${id} (Updated: ${new Date().toLocaleString()})`,
@@ -201,7 +196,7 @@ class DataManager {
                 })
             });
         } else {
-            resp = await this.githubFetch("https://api.github.com/gists", {
+            response = await this.githubFetch("https://api.github.com/gists", {
                 method: 'POST',
                 body: JSON.stringify({
                     description: `RoutineShifter Sync: ${id} (Created: ${new Date().toLocaleString()})`,
@@ -209,8 +204,20 @@ class DataManager {
                     files: { [filename]: { content: dataStr } }
                 })
             });
-            const newGist = await resp.json();
+            const newGist = await response.json();
             targetGistId = newGist.id;
+        }
+
+        if (!response.ok) {
+            let errorMsg = "保存に失敗しました。";
+            if (response.status === 401) errorMsg += "Tokenが無効または期限切れです。";
+            else if (response.status === 403) errorMsg += "アクセス権限がありません。";
+            else if (response.status === 404) errorMsg += "同期データ（Gist）が見つかりません。";
+            
+            const errorData = await response.json().catch(() => ({}));
+            console.error("Gist push failed:", response.status, errorData);
+            alert(errorMsg);
+            return;
         }
 
         // Cleanup clones
@@ -220,12 +227,9 @@ class DataManager {
             }
         }
 
-        if (resp && resp.ok) {
-            const nowTime = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-            this.saveTimestamp('lastPush', nowTime);
-            return nowTime;
-        }
-        throw new Error("保存に失敗しました");
+        const nowTime = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        this.saveTimestamp('lastPush', nowTime);
+        return nowTime;
     }
 
     async loadFromCloud() {
@@ -240,8 +244,19 @@ class DataManager {
         if (matches.length === 0) throw new Error("データが見つかりませんでした");
 
         matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-        const detailsResp = await this.githubFetch(matches[0].url);
-        const details = await detailsResp.json();
+        const response = await this.githubFetch(matches[0].url);
+        
+        if (!response.ok) {
+            let errorMsg = "読込に失敗しました。";
+            if (response.status === 404) errorMsg += "指定されたIDのデータが見つかりません。";
+            else if (response.status === 403 || response.status === 401) errorMsg += "Tokenが無効か権限がありません。";
+            
+            console.error("Gist fetch failed:", response.status);
+            alert(errorMsg);
+            return null;
+        }
+
+        const details = await response.json();
         const actualKey = Object.keys(details.files).find(key => key.normalize() === filename.normalize());
         const data = JSON.parse(details.files[actualKey].content);
 
@@ -531,19 +546,28 @@ class RoutineApp {
     }
 
     _applyLoadedData(data) {
-        if (this.els.themeSelect) this.els.themeSelect.value = this.currentThemeId;
         if (!data) {
-            // Setup defaults for first-time users
             this._setDefaults();
             return;
         }
-        
-        // Sync color theme if provided in cloud data
-        if (data.colorTheme && data.colorTheme !== this.currentThemeId) {
-            this._handleThemeChange(data.colorTheme, false); // Don't re-save yet
+
+        // 1. 基本データの復元
+        this.data.routines = data.routines || [];
+        this.data.shiftHours = data.shiftHours || 0;
+        if (data.memo !== undefined && this.els.memo) {
+            this.els.memo.value = data.memo;
         }
 
-        if (this.els.memo) this.els.memo.value = data.memo || "";
+        // 2. テーマの同期
+        if (data.colorTheme && CONFIG.THEMES[data.colorTheme]) {
+            this.currentThemeId = data.colorTheme;
+            this.currentColors = CONFIG.THEMES[data.colorTheme].colors;
+            this.chart.updateColors(this.currentColors);
+            if (this.els.themeSelect) this.els.themeSelect.value = data.colorTheme;
+            localStorage.setItem(CONFIG.STORAGE_KEYS.COLOR_THEME, data.colorTheme);
+        }
+
+        // 3. UI全体の更新
         if (this.els.wake) this.els.wake.value = data.baseWakeupTime || "06:00";
         if (this.els.chime) this.els.chime.value = data.chimeType || "none";
         if (this.els.syncId) this.els.syncId.value = this.data.syncId;
@@ -554,10 +578,6 @@ class RoutineApp {
         if (data.wakeChecks) {
             this.els.wakeChecks.forEach((cb, i) => { if (cb) cb.checked = data.wakeChecks[i]; });
         }
-        
-        // Important: Update internal state from loaded data
-        this.data.routines = data.routines || [];
-        this.data.shiftHours = data.shiftHours || 0;
 
         this.els.shift.value = Utils.decimalToOffsetStr(this.data.shiftHours);
         if (this.els.slider) this.els.slider.value = this.data.shiftHours;
@@ -566,6 +586,7 @@ class RoutineApp {
         if (this.els.loadDisplay) this.els.loadDisplay.textContent = `最終更新: ${ts.lastPull || '--:--'}`;
         if (this.els.savedDisplay) this.els.savedDisplay.textContent = `最終更新: ${ts.lastPush || '--:--'}`;
         this._updateSyncStatusUI();
+        this._renderAll();
     }
 
     _addEventListeners() {
