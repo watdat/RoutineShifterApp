@@ -25,7 +25,6 @@
                 <header>
                     <div class="title-header">
                         <h1><a href="https://watdat.github.io/RoutineShifterApp/">Daily Routine Shifter</a></h1>
-                        <a href="manual.html" class="usage-guide-link">ℹ️ 使い方ガイド</a>
                     </div>
                     <p>1日のルーティンを可視化し、時間をシフトして確認できます</p>
 
@@ -51,19 +50,19 @@
                     <!-- Checkbox Row -->
                     <div class="checkbox-row">
                         <label class="checkbox-item wakeup-item">
-                            Wake: <input type="time" id="baseWakeupTime" value="05:00">
+                            Wake: <input type="time" id="baseWakeupTime" value="06:00">
                         </label>
                         <label class="checkbox-item">
                             <input type="checkbox" id="checkWake0"> Wake+0h (<span class="dynamic-time"
-                                data-offset="0">05:00</span>)
+                                data-offset="0">06:00</span>)
                         </label>
                         <label class="checkbox-item">
                             <input type="checkbox" id="checkWake8"> Wake+8h (<span class="dynamic-time"
-                                data-offset="8">13:00</span>)
+                                data-offset="8">14:00</span>)
                         </label>
                         <label class="checkbox-item">
                             <input type="checkbox" id="checkWake16"> Wake+16h (<span class="dynamic-time"
-                                data-offset="16">21:00</span>)
+                                data-offset="16">22:00</span>)
                         </label>
                     </div>
                 </header>
@@ -85,8 +84,8 @@
             <section class="glass-panel sidebar-lower">
                 <section class="shift-section">
                     <div class="shift-header">
-                        <label class="shift-label">時間をずらす (15分毎)</label>
-                        <span id="resetShift" class="reset-link">シフトをリセット</span>
+                        <label class="shift-label">時間をずらす(15分毎)</label>
+                        <span id="resetShift" class="reset-link">RESET</span>
                     </div>
 
                     <div class="shift-ui-container">
@@ -143,7 +142,7 @@
                     </div>
                     <div class="input-group">
                         <textarea id="bulkInput" rows="5" placeholder="例：
-睡眠 22:00-05:00
+睡眠 22:00-06:00
 仕事 09:00 - 17:00"></textarea>
                         <button id="importBtn" class="btn-primary">テキストから読み込む</button>
                         <p class="sync-note">※既存のルーティンは上書きされます</p>
@@ -152,11 +151,11 @@
 
                 <section class="sync-section glass-panel">
                     <div class="sync-header">
-                        <h2>IDデータ読み書き</h2>
+                        <h2>ID読み書き</h2>
                         <div class="sync-token-area">
                             <div id="ghTokenWrapper" class="gh-token-wrapper">
                                 <input type="password" id="ghTokenInput" class="gh-token-input"
-                                    placeholder="Token未設定:開発者へ依頼ください）">
+                                    placeholder="Token未設定:開発者にて発行可能）">
                             </div>
                             <button id="shareSettingsBtn" class="btn-share" title="設定をスマホへ転送">📲</button>
                         </div>
